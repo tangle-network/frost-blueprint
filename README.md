@@ -2,6 +2,10 @@
 
 **A FROST Blueprint for Tangle Network.**
 
+
+> [!CAUTION]
+> This still WIP and mostly broken, keep an eye on the commit log
+
 ## 📚 Prerequisites
 
 Before you can run this project, you will need to have the following software installed on your machine:
