@@ -1,0 +1,33 @@
+name: Verify Template
+on:
+  workflow_dispatch:
+  pull_request:
+  push:
+    branches: [ 'main' ]
+    paths-ignore:
+      - "**.md"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      PROJECT_NAME: blueprint-template
+    steps:
+      - uses: actions/checkout@v4
+      - uses: JohnPeel/cargo-generate-action@main
+        with:
+          name: ${{ env.PROJECT_NAME }}
+          arguments: >
+            --define gh-username="tangle-network"
+            --define project-description="An example blueprint"
+            --define project-homepage="https://tangle.tools"
+            --define flakes=true
+            --define docker=true
+            --define base-image="rustlang/rust:nightly"
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+      - run: |
+          cp -r $PROJECT_NAME ${{ runner.temp }}/
+          cd ${{ runner.temp }}/$PROJECT_NAME
+          cargo check

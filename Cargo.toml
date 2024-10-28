@@ -1,0 +1,78 @@
+[package]
+name = "frost-blueprint"
+version = "0.1.0"
+edition = "2021"
+description = "FROST Blueprint built using Tangle Gadget SDK"
+authors = ["Webb Technologies Inc."]
+license = "Unlicense"
+homepage = "https://github.com/tangle-network/frost-blueprint"
+repository = "https://github.com/tangle-network/frost-blueprint"
+readme = "README.md"
+categories = ["cryptography", "cryptography::cryptocurrencies"]
+keywords = ["tangle", "blueprint", "avs"]
+rust-version = "1.81"
+
+[dependencies]
+tracing = "0.1"
+thiserror = "1.0"
+async-trait = "0.1"
+color-eyre = "0.6"
+structopt = "0.3.26"
+tokio = { version = "1.39", default-features = false, features = ["full"] }
+tracing-subscriber = { version = "0.3", features = ["parking_lot", "env-filter"] }
+derive_more = { version = "1", default-features = false, features = ["display", "from", "try_from"] }
+serde_json = { version = "1.0", default-features = false, features = ["alloc"] }
+
+# FROST
+frost-core = { version = "2.0", default-features = false, features = ["serialization", "cheater-detection"] }
+frost-ed25519 = { version = "2.0", default-features = false, features = ["serialization", "cheater-detection"] }
+frost-secp256k1 = { version = "2.0", default-features = false, features = ["serialization", "cheater-detection"] }
+
+[features]
+default = ["std"]
+std = [
+    "gadget-sdk/std",
+    "frost-core/std",
+    "frost-ed25519/std",
+    "frost-secp256k1/std",
+    "derive_more/std",
+    "serde_json/std",
+]
+
+[dependencies.gadget-sdk]
+version = "0.2.3"
+default-features = false
+path = "../gadget/sdk"
+features = ["getrandom"]
+
+[dev-dependencies.blueprint-test-utils]
+version = "0.1.1"
+default-features = false
+path = "../gadget/blueprint-test-utils"
+features = ["std"]
+
+[dev-dependencies.cargo-tangle]
+version = "0.2"
+path = "../gadget/cli"
+
+[build-dependencies]
+blueprint-metadata = "0.1.6"
+
+[lib]
+path = "src/lib.rs"
+
+[[bin]]
+name = "frost-gadget"
+path = "src/main.rs"
+
+[package.metadata.blueprint]
+manager = { Evm = "FrostBlueprint" }
+
+# [[package.metadata.gadget.Native.sources]]
+# owner = "tangle-network"
+# repo = "frost-blueprint"
+# tag = "0.1.0"
+# binaries = [
+#     { arch = "Amd64", os = "Linux", name = "amd64-linux-frost-blueprint-gadget" },
+#     { arch = "Arm64", os = "Linux", name = "arm64-linux-frost-blueprint-gadget" },
+# ]
