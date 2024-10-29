@@ -8,6 +8,8 @@ use tangle_testnet_runtime::api::{self, runtime_types::tangle_primitives};
 
 #[sdk::main(env)]
 async fn main() -> Result<()> {
+    let span = env.span.clone();
+    let _spanned = span.enter();
     let signer = env.first_sr25519_signer()?;
     let network_identity = {
         let ed25519 = env.first_ed25519_signer()?.signer().clone();
@@ -21,8 +23,7 @@ async fn main() -> Result<()> {
         env.bootnodes.clone(),
         env.bind_addr,
         env.bind_port,
-        // TODO: add version to the service name.
-        "frost",
+        blueprint::NETWORK_PROTOCOL,
     );
     let gossip_handle = sdk::network::setup::start_p2p_network(network_config)?;
 
@@ -56,16 +57,15 @@ async fn main() -> Result<()> {
     };
 
     // Create the event handler from the job
-    let say_hello_job = blueprint::keygen::KeygenEventHandler {
+    let keygen = blueprint::keygen::KeygenEventHandler {
         service_id,
         client,
         signer,
         context,
     };
 
-    tracing::info!("Starting the event watcher ...");
-    MultiJobRunner::new(env).job(say_hello_job).run().await?;
-
-    tracing::info!("Exiting...");
+    sdk::info!("Starting the event watcher ...");
+    MultiJobRunner::new(env).job(keygen).run().await?;
+    sdk::info!("Exiting...");
     Ok(())
 }

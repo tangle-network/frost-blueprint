@@ -18,6 +18,7 @@ thiserror = "1.0"
 async-trait = "0.1"
 color-eyre = "0.6"
 structopt = "0.3.26"
+hex = "0.4"
 tokio = { version = "1.39", default-features = false, features = ["full"] }
 tracing-subscriber = { version = "0.3", features = ["parking_lot", "env-filter"] }
 derive_more = { version = "1", default-features = false, features = ["display", "from", "try_from"] }
@@ -62,7 +63,7 @@ blueprint-metadata = "0.1.6"
 path = "src/lib.rs"
 
 [[bin]]
-name = "frost-gadget"
+name = "frost-blueprint"
 path = "src/main.rs"
 
 [package.metadata.blueprint]
@@ -73,6 +74,6 @@ manager = { Evm = "FrostBlueprint" }
 # repo = "frost-blueprint"
 # tag = "0.1.0"
 # binaries = [
-#     { arch = "Amd64", os = "Linux", name = "amd64-linux-frost-blueprint-gadget" },
-#     { arch = "Arm64", os = "Linux", name = "arm64-linux-frost-blueprint-gadget" },
+#     { arch = "Amd64", os = "Linux", name = "amd64-linux-frost-blueprint" },
+#     { arch = "Arm64", os = "Linux", name = "arm64-linux-frost-blueprint" },
 # ]
