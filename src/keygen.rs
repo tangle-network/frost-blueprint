@@ -114,6 +114,7 @@ pub async fn keygen(
     Ok(key)
 }
 
+/// A genaric keygen protocol over any ciphersuite.
 async fn keygen_internal<C: Ciphersuite, R: random::RngCore + random::CryptoRng, N: Network>(
     rng: R,
     net: &N,

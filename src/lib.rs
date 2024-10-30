@@ -6,9 +6,12 @@ use sdk::ctx::{KeystoreContext, ServicesContext, TangleClientContext};
 
 /// FROST Keygen module
 pub mod keygen;
+/// FROST Signing module
+pub mod sign;
 
 pub const NETWORK_PROTOCOL: &str = "/zcash/frost/1.0.0";
 
+/// The context that is passed to the service functions
 #[derive(Clone, KeystoreContext, TangleClientContext, ServicesContext)]
 pub struct ServiceContext {
     #[config]
@@ -18,7 +21,6 @@ pub struct ServiceContext {
 
 impl GossipNetworkContext for ServiceContext {
     fn gossip_network(&self) -> &gadget_sdk::network::gossip::GossipHandle {
-        // acts as a getter.
         &self.gossip_handle
     }
 }
