@@ -6,6 +6,8 @@ use sdk::ctx::{KeystoreContext, ServicesContext, TangleClientContext};
 
 /// FROST Keygen module
 pub mod keygen;
+/// Key-Value Storage module
+mod kv;
 /// FROST Signing module
 pub mod sign;
 
