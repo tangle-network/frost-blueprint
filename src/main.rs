@@ -1,10 +1,10 @@
 use color_eyre::Result;
 use frost_blueprint as blueprint;
-use gadget_sdk as sdk;
-use gadget_sdk::job_runner::MultiJobRunner;
-use sdk::subxt_core::ext::sp_core::Pair;
+use gadget_sdk::{
+    self as sdk,
+    runners::{tangle::TangleConfig, BlueprintRunner},
+};
 use sdk::tangle_subxt::*;
-use tangle_testnet_runtime::api::{self, runtime_types::tangle_primitives};
 
 #[sdk::main(env)]
 async fn main() -> Result<()> {
@@ -26,28 +26,9 @@ async fn main() -> Result<()> {
         blueprint::NETWORK_PROTOCOL,
     );
     let gossip_handle = sdk::network::setup::start_p2p_network(network_config)?;
+    let tangle = env.protocol_specific.tangle()?;
 
-    if env.should_run_registration() {
-        let preferences = tangle_primitives::services::OperatorPreferences {
-            key: my_ecdsa_key.public().0,
-            price_targets: tangle_primitives::services::PriceTargets {
-                cpu: 0,
-                mem: 0,
-                storage_hdd: 0,
-                storage_ssd: 0,
-                storage_nvme: 0,
-            },
-        };
-        let registration_args = vec![];
-        let xt = api::tx()
-            .services()
-            .register(env.blueprint_id, preferences, registration_args);
-
-        sdk::tx::tangle::send(&client, &signer, &xt).await?;
-        return Ok(());
-    }
-
-    let service_id = env.service_id.expect("should exist");
+    let service_id = tangle.service_id;
 
     // Create your service context
     // Here you can pass any configuration or context that your service needs.
@@ -69,7 +50,11 @@ async fn main() -> Result<()> {
     };
 
     sdk::info!("Starting the event watcher ...");
-    MultiJobRunner::new(env).job(keygen).job(sign).run().await?;
+    BlueprintRunner::new(TangleConfig::default(), env)
+        .job(keygen)
+        .job(sign)
+        .run()
+        .await?;
     sdk::info!("Exiting...");
     Ok(())
 }

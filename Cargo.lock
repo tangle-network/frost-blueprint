@@ -1873,6 +1873,7 @@ dependencies = [
  "futures",
  "gadget-io",
  "gadget-sdk",
+ "lazy_static",
  "libp2p",
  "log",
  "parking_lot 0.12.3",
@@ -4798,6 +4799,7 @@ dependencies = [
  "http-body-util",
  "hyper 1.5.0",
  "hyper-util",
+ "itertools 0.13.0",
  "k256",
  "libp2p",
  "lock_api",
@@ -4817,6 +4819,7 @@ dependencies = [
  "subxt",
  "subxt-core",
  "subxt-signer",
+ "symbiotic-rs",
  "sysinfo",
  "tangle-subxt",
  "thiserror",
@@ -11558,6 +11561,17 @@ dependencies = [
  "thiserror",
  "url",
  "zip",
+]
+
+[[package]]
+name = "symbiotic-rs"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "02f31217207638b7cba9751cedb9ddb612478423d7bf8700091cf1f9970bbc5f"
+dependencies = [
+ "alloy-contract",
+ "alloy-sol-types",
+ "serde",
 ]
 
 [[package]]

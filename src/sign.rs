@@ -70,7 +70,7 @@ impl<C: Ciphersuite> From<frost_core::Error<C>> for Error {
     params(pubkey, msg),
     result(_),
     event_listener(
-        listener = TangleEventListener::<JobCalled, ServiceContext>,
+        listener = TangleEventListener::<ServiceContext, JobCalled>,
         pre_processor = services_pre_processor,
         post_processor = services_post_processor,
     )
@@ -340,16 +340,14 @@ mod tests {
 
         new_test_ext_blueprint_manager::<N, 1, (), _, _>((), opts, run_test_blueprint_manager)
             .await
-            .execute_with_async(move |client, handles| async move {
+            .execute_with_async(move |client, handles, svcs| async move {
                 // At this point, blueprint has been deployed, every node has registered
                 // as an operator for the relevant services, and, all gadgets are running
 
                 let keypair = handles[0].sr25519_id().clone();
 
-                let service_id = get_next_service_id(client)
-                    .await
-                    .expect("Failed to get next service id")
-                    .saturating_sub(1);
+                let service = svcs.services.last().unwrap();
+                let service_id = service.id;
                 let call_id = get_next_call_id(client)
                     .await
                     .expect("Failed to get next job id")
