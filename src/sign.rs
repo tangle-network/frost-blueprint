@@ -17,10 +17,12 @@ use sdk::event_listener::tangle::{
 use sdk::tangle_subxt::subxt::tx::Signer;
 use sdk::tangle_subxt::tangle_testnet_runtime::api;
 
-use crate::{CipherSuite, ServiceContext};
+use crate::ServiceContext;
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
+    #[error("Unknown ciphersuite: {0}")]
+    UnknwonCiphersuite(String),
     #[error("The Secret Share for that key is not found")]
     KeyNotFound,
     #[error("Self not in operators")]
@@ -32,13 +34,15 @@ pub enum Error {
     #[error(transparent)]
     Sdk(#[from] sdk::error::Error),
     #[error(transparent)]
+    Json(#[from] serde_json::Error),
+    #[error(transparent)]
     Config(#[from] sdk::config::Error),
     #[error("Frost error: {0}")]
     Frost(Box<dyn std::error::Error>),
     #[error(transparent)]
-    SerdeJson(#[from] serde_json::Error),
-    #[error(transparent)]
     ToUnsigned16(#[from] std::num::TryFromIntError),
+    #[error(transparent)]
+    Io(#[from] std::io::Error),
 }
 
 impl<C: Ciphersuite> From<frost_core::Error<C>> for Error {
@@ -76,7 +80,13 @@ pub async fn sign(
     msg: Vec<u8>,
     context: ServiceContext,
 ) -> Result<Vec<u8>, Error> {
-    let ciphersuite = todo!();
+    let pubkey_hex = hex::encode(&pubkey);
+    let kv = &context.store;
+    let raw_info = kv.get(&pubkey_hex)?.ok_or(Error::KeyNotFound)?;
+    let info_json_value = serde_json::from_slice::<serde_json::Value>(&raw_info)?;
+    let ciphersuite = info_json_value["ciphersuite"]
+        .as_str()
+        .ok_or(Error::KeyNotFound)?;
     let client = context.tangle_client().await?;
     let operators_with_restake = context.current_service_operators(&client).await?;
     let my_key = context.config.first_sr25519_signer()?;
@@ -91,36 +101,25 @@ pub async fn sign(
     sdk::info!(%n, %i, %ciphersuite, "Signing");
     let net = context.gossip_network();
     let rng = random::rand::rngs::OsRng;
-    let key = match ciphersuite {
-        CipherSuite::Ed25519 => {
-            let (pubkeypkg, keypkg) = todo!();
-            signing_internal::<frost_ed25519::Ed25519Sha512, _, _>(
-                rng,
-                net,
-                keypkg,
-                pubkeypkg,
-                &[],
-                msg,
-            )
-            .await?
-            .serialize()?
+    let signature = match ciphersuite {
+        frost_ed25519::Ed25519Sha512::ID => {
+            let entry: crate::keygen::KeygenEntry<frost_ed25519::Ed25519Sha512> =
+                serde_json::from_value(info_json_value["entry"].clone())?;
+            signing_internal(rng, net, entry.keypkg, entry.pubkeypkg, &[], msg)
+                .await?
+                .serialize()?
         }
-        CipherSuite::Secp256k1 => {
-            let (pubkeypkg, keypkg) = todo!();
-            signing_internal::<frost_secp256k1::Secp256K1Sha256, _, _>(
-                rng,
-                net,
-                keypkg,
-                pubkeypkg,
-                &[],
-                msg,
-            )
-            .await?
-            .serialize()?
+        frost_secp256k1::Secp256K1Sha256::ID => {
+            let entry: crate::keygen::KeygenEntry<frost_secp256k1::Secp256K1Sha256> =
+                serde_json::from_value(info_json_value["entry"].clone())?;
+            signing_internal(rng, net, entry.keypkg, entry.pubkeypkg, &[], msg)
+                .await?
+                .serialize()?
         }
+        _ => return Err(Error::UnknwonCiphersuite(ciphersuite.to_string())),
     };
 
-    Ok(key)
+    Ok(signature)
 }
 
 /// A genaric signing protocol over a given ciphersuite.
@@ -303,6 +302,7 @@ async fn signing_internal<C: Ciphersuite, R: random::RngCore + random::CryptoRng
 #[cfg(test)]
 mod tests {
     use api::runtime_types::bounded_collections::bounded_vec::BoundedVec;
+    use api::runtime_types::tangle_primitives::services::field::BoundedString;
     use api::runtime_types::tangle_primitives::services::field::Field;
     use api::services::calls::types::call::Args;
     use blueprint_test_utils::test_ext::*;
@@ -316,7 +316,7 @@ mod tests {
 
     #[tokio::test(flavor = "multi_thread")]
     #[allow(clippy::needless_return)]
-    async fn keygen() {
+    async fn signing() {
         setup_log();
         let base_path = std::env::current_dir().expect("Failed to get current directory");
         let base_path = base_path
@@ -336,7 +336,7 @@ mod tests {
 
         const N: usize = 3;
         const T: usize = N / 2 + 1;
-        const CIPHERSUITE: CipherSuite = CipherSuite::Ed25519;
+        const CIPHERSUITE: &str = frost_ed25519::Ed25519Sha512::ID;
 
         new_test_ext_blueprint_manager::<N, 1, (), _, _>((), opts, run_test_blueprint_manager)
             .await
@@ -358,7 +358,7 @@ mod tests {
                 info!("Submitting keygen job with params service ID: {service_id}, call ID: {call_id}");
 
                 // Pass the arguments
-                let ciphersuite = Field::Uint8(CIPHERSUITE as u8);
+                let ciphersuite = Field::String(BoundedString(BoundedVec(CIPHERSUITE.to_string().into_bytes())));
                 let threshold = Field::Uint16(T as u16);
                 let job_args = Args::from([ciphersuite, threshold]);
 

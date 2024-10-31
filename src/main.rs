@@ -51,13 +51,17 @@ async fn main() -> Result<()> {
 
     // Create your service context
     // Here you can pass any configuration or context that your service needs.
-    let context = blueprint::ServiceContext {
-        config: env.clone(),
-        gossip_handle,
-    };
+    let context = blueprint::ServiceContext::new(env.clone(), gossip_handle)?;
 
     // Create the event handler from the job
     let keygen = blueprint::keygen::KeygenEventHandler {
+        service_id,
+        client: client.clone(),
+        signer: signer.clone(),
+        context: context.clone(),
+    };
+
+    let sign = blueprint::sign::SignEventHandler {
         service_id,
         client,
         signer,
@@ -65,7 +69,7 @@ async fn main() -> Result<()> {
     };
 
     sdk::info!("Starting the event watcher ...");
-    MultiJobRunner::new(env).job(keygen).run().await?;
+    MultiJobRunner::new(env).job(keygen).job(sign).run().await?;
     sdk::info!("Exiting...");
     Ok(())
 }

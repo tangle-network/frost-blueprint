@@ -1,63 +1,59 @@
 use std::collections::HashMap;
 
-/// In-memory key-value store.
-#[derive(Debug, Clone)]
-pub struct MemKVStore<K, V> {
-    store: HashMap<K, V>,
+use gadget_sdk::parking_lot;
+
+/// Shared In-memory key-value store.
+#[derive(Debug)]
+pub struct MemKVStore<K, V, E> {
+    store: parking_lot::Mutex<HashMap<K, V>>,
+    error: core::marker::PhantomData<E>,
 }
 
-impl<K, V> MemKVStore<K, V>
+impl<K, V, E> MemKVStore<K, V, E>
 where
     K: Eq + std::hash::Hash,
+    V: Clone,
 {
     /// Create a new `MemKVStore`.
     pub fn new() -> Self {
         MemKVStore {
-            store: HashMap::new(),
+            store: parking_lot::Mutex::new(HashMap::new()),
+            error: core::marker::PhantomData,
         }
     }
 
     /// Insert a key-value pair into the store.
-    pub fn insert(&mut self, key: K, value: V) {
-        self.store.insert(key, value);
+    pub fn insert(&self, key: K, value: V) {
+        self.store.lock().insert(key, value);
     }
 
     /// Get the value associated with a key.
-    pub fn get(&self, key: &K) -> Option<&V> {
-        self.store.get(key)
+    pub fn get(&self, key: &K) -> Option<V> {
+        self.store.lock().get(key).cloned()
     }
 
     /// Remove a key-value pair from the store.
-    pub fn remove(&mut self, key: &K) -> Option<V> {
-        self.store.remove(key)
+    pub fn remove(&self, key: &K) -> Option<V> {
+        self.store.lock().remove(key)
     }
 
     /// Check if the store contains a key.
     pub fn contains_key(&self, key: &K) -> bool {
-        self.store.contains_key(key)
-    }
-
-    /// Get the number of key-value pairs in the store.
-    pub fn len(&self) -> usize {
-        self.store.len()
-    }
-
-    /// Check if the store is empty.
-    pub fn is_empty(&self) -> bool {
-        self.store.is_empty()
+        self.store.lock().contains_key(key)
     }
 }
 
-impl<K, V> Default for MemKVStore<K, V>
+impl<K, V, E> Default for MemKVStore<K, V, E>
 where
     K: Eq + std::hash::Hash,
+    V: Clone,
 {
     fn default() -> Self {
         MemKVStore::new()
     }
 }
 
-impl<K, V> super::KVStore for MemKVStore<K, V>
+impl<K, V, E> super::KVStore for MemKVStore<K, V, E>
 where
     K: Eq + std::hash::Hash + Clone + AsRef<[u8]>,
     V: Clone + AsRef<[u8]>,
@@ -66,19 +62,23 @@ where
 
     type Value = V;
 
-    fn get(&self, key: &Self::Key) -> Option<&Self::Value> {
-        MemKVStore::get(self, key)
+    type Error = E;
+
+    fn get(&self, key: &Self::Key) -> Result<Option<Self::Value>, Self::Error> {
+        Ok(MemKVStore::get(self, key))
     }
 
-    fn set(&mut self, key: Self::Key, value: Self::Value) {
+    fn set(&self, key: Self::Key, value: Self::Value) -> Result<(), Self::Error> {
         self.insert(key, value);
+        Ok(())
     }
 
-    fn del(&mut self, key: &Self::Key) {
+    fn del(&self, key: &Self::Key) -> Result<(), Self::Error> {
         self.remove(key);
+        Ok(())
     }
 
-    fn ex(&self, key: &Self::Key) -> bool {
-        self.contains_key(key)
+    fn ex(&self, key: &Self::Key) -> Result<bool, Self::Error> {
+        Ok(self.contains_key(key))
     }
 }

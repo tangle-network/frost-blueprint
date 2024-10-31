@@ -1,9 +1,9 @@
 use std::collections::BTreeMap;
 
 use api::services::events::JobCalled;
-use frost_core::keys::dkg;
 use frost_core::keys::dkg::round1::Package as Round1Package;
 use frost_core::keys::dkg::round2::Package as Round2Package;
+use frost_core::keys::{dkg, KeyPackage, PublicKeyPackage};
 use frost_core::{Ciphersuite, Identifier, VerifyingKey};
 use gadget_sdk::network::{IdentifierInfo, Network};
 use gadget_sdk::{self as sdk, random};
@@ -15,12 +15,12 @@ use sdk::event_listener::tangle::{
 use sdk::tangle_subxt::subxt::tx::Signer;
 use sdk::tangle_subxt::tangle_testnet_runtime::api;
 
-use crate::{CipherSuite, ServiceContext};
+use crate::ServiceContext;
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
     #[error("Unknown ciphersuite: {0}")]
-    UnknwonCiphersuite(u8),
+    UnknwonCiphersuite(String),
     #[error("Self not in operators")]
     SelfNotInOperators,
 
@@ -36,6 +36,8 @@ pub enum Error {
     SerdeJson(#[from] serde_json::Error),
     #[error(transparent)]
     ToUnsigned16(#[from] std::num::TryFromIntError),
+    #[error(transparent)]
+    Io(#[from] std::io::Error),
 }
 
 impl<C: Ciphersuite> From<frost_core::Error<C>> for Error {
@@ -57,7 +59,7 @@ impl<C: Ciphersuite> From<frost_core::Error<C>> for Error {
 /// - `SelfNotInOperators`: The current operator is not in the operators.
 ///
 /// # Note
-/// - `ciphersuite`: 0 for Ed25519, 1 for Secp256k1.
+/// - `ciphersuite`: The `ID` of the ciphersuite; oneof [`FROST-ED25519-SHA512-v1`, `FROST-secp256k1-SHA256-v1`].
 /// - `threshold`: The threshold of the keygen protocol should be less than the number of operators.
 #[sdk::job(
     id = 0,
@@ -70,12 +72,10 @@ impl<C: Ciphersuite> From<frost_core::Error<C>> for Error {
     )
 )]
 pub async fn keygen(
-    ciphersuite: u8,
+    ciphersuite: String,
     threshold: u16,
     context: ServiceContext,
 ) -> Result<Vec<u8>, Error> {
-    let ciphersuite =
-        CipherSuite::try_from(ciphersuite).map_err(|e| Error::UnknwonCiphersuite(e.input))?;
     let client = context.tangle_client().await?;
     let operators_with_restake = context.current_service_operators(&client).await?;
     let my_key = context.config.first_sr25519_signer()?;
@@ -90,34 +90,49 @@ pub async fn keygen(
     sdk::info!(%n, %i, %ciphersuite, "Keygen");
     let net = context.gossip_network();
     let rng = random::rand::rngs::OsRng;
-    let key = match ciphersuite {
-        CipherSuite::Ed25519 => keygen_internal::<frost_ed25519::Ed25519Sha512, _, _>(
+    let kv = context.store.clone();
+    let key = match ciphersuite.as_str() {
+        frost_ed25519::Ed25519Sha512::ID => keygen_internal::<frost_ed25519::Ed25519Sha512, _, _>(
             rng,
             net,
+            kv,
             threshold,
             u16::try_from(n)?,
             u16::try_from(i)?,
         )
         .await?
         .serialize()?,
-        CipherSuite::Secp256k1 => keygen_internal::<frost_secp256k1::Secp256K1Sha256, _, _>(
-            rng,
-            net,
-            threshold,
-            u16::try_from(n)?,
-            u16::try_from(i)?,
-        )
-        .await?
-        .serialize()?,
+        frost_secp256k1::Secp256K1Sha256::ID => {
+            keygen_internal::<frost_secp256k1::Secp256K1Sha256, _, _>(
+                rng,
+                net,
+                kv,
+                threshold,
+                u16::try_from(n)?,
+                u16::try_from(i)?,
+            )
+            .await?
+            .serialize()?
+        }
+        _ => return Err(Error::UnknwonCiphersuite(ciphersuite)),
     };
 
     Ok(key)
+}
+
+/// A KeygenEntry to store the keygen result.
+#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
+#[serde(bound = "C: Ciphersuite")]
+pub struct KeygenEntry<C: Ciphersuite> {
+    pub keypkg: KeyPackage<C>,
+    pub pubkeypkg: PublicKeyPackage<C>,
 }
 
 /// A genaric keygen protocol over any ciphersuite.
 async fn keygen_internal<C: Ciphersuite, R: random::RngCore + random::CryptoRng, N: Network>(
     rng: R,
     net: &N,
+    kv: crate::kv::SharedDynKVStore<String, Vec<u8>>,
     t: u16,
     n: u16,
     i: u16,
@@ -247,17 +262,29 @@ async fn keygen_internal<C: Ciphersuite, R: random::RngCore + random::CryptoRng,
         dkg::part3(&round2_secret_package, &round1_packages, &round2_packages)?;
 
     sdk::debug!(%i, "Round 3 Done");
+    let verifying_key = public_key_package.verifying_key().clone();
+    let pubkey = hex::encode(verifying_key.serialize()?);
     sdk::debug!(
         %i,
-        pubkey = %hex::encode(public_key_package.verifying_key().serialize()?),
+        %pubkey,
         "Keygen Done"
     );
-    // TODO: Store key_package somewhere by the public key package.
-    Ok(public_key_package.verifying_key().clone())
+    let entry = serde_json::json!({
+        "ciphersuite": C::ID,
+        "entry": KeygenEntry {
+            keypkg: key_package,
+            pubkeypkg: public_key_package,
+        },
+    });
+    // Save the keygen entry.
+    kv.set(pubkey, serde_json::to_vec(&entry)?)?;
+    Ok(verifying_key)
 }
 
 #[cfg(test)]
 mod tests {
+    use api::runtime_types::bounded_collections::bounded_vec::BoundedVec;
+    use api::runtime_types::tangle_primitives::services::field::BoundedString;
     use api::runtime_types::tangle_primitives::services::field::Field;
     use api::services::calls::types::call::Args;
     use blueprint_test_utils::test_ext::*;
@@ -288,7 +315,11 @@ mod tests {
             signer_evm: None,
         };
 
-        new_test_ext_blueprint_manager::<2, 1, (), _, _>((), opts, run_test_blueprint_manager)
+        const N: usize = 3;
+        const T: usize = N / 2 + 1;
+        const CIPHERSUITE: &str = frost_ed25519::Ed25519Sha512::ID;
+
+        new_test_ext_blueprint_manager::<N, 1, (), _, _>((), opts, run_test_blueprint_manager)
             .await
             .execute_with_async(move |client, handles| async move {
                 // At this point, blueprint has been deployed, every node has registered
@@ -308,8 +339,10 @@ mod tests {
                 info!("Submitting job with params service ID: {service_id}, call ID: {call_id}");
 
                 // Pass the arguments
-                let ciphersuite = Field::Uint8(CipherSuite::Ed25519 as u8);
-                let threshold = Field::Uint16(2);
+                let ciphersuite = Field::String(BoundedString(BoundedVec(
+                    CIPHERSUITE.to_string().into_bytes(),
+                )));
+                let threshold = Field::Uint16(T as u16);
                 let job_args = Args::from([ciphersuite, threshold]);
 
                 // Next step: submit a job under that service/job id

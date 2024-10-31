@@ -21,7 +21,7 @@ structopt = "0.3.26"
 hex = "0.4"
 tokio = { version = "1.39", default-features = false, features = ["full"] }
 tracing-subscriber = { version = "0.3", features = ["parking_lot", "env-filter"] }
-derive_more = { version = "1", default-features = false, features = ["display", "from", "try_from"] }
+serde = { version = "1.0", default-features = false, features = ["alloc"] }
 serde_json = { version = "1.0", default-features = false, features = ["alloc"] }
 
 # FROST
@@ -29,16 +29,21 @@ frost-core = { version = "2.0", default-features = false, features = ["serializa
 frost-ed25519 = { version = "2.0", default-features = false, features = ["serialization", "cheater-detection"] }
 frost-secp256k1 = { version = "2.0", default-features = false, features = ["serialization", "cheater-detection"] }
 
+sled = { version = "0.34", default-features = false, optional = true }
+
+
 [features]
-default = ["std"]
+default = ["std", "kv-sled"]
 std = [
     "gadget-sdk/std",
     "frost-core/std",
     "frost-ed25519/std",
     "frost-secp256k1/std",
-    "derive_more/std",
     "serde_json/std",
+    "serde/std",
 ]
+kv-sled = ["sled"]
+kv-mem = []
 
 [dependencies.gadget-sdk]
 version = "0.2.3"
