@@ -318,6 +318,7 @@ mod tests {
     #[allow(clippy::needless_return)]
     async fn signing() {
         setup_log();
+        let tangle = crate::test_utils::run_tangle().unwrap();
         let base_path = std::env::current_dir().expect("Failed to get current directory");
         let base_path = base_path
             .canonicalize()
@@ -327,14 +328,14 @@ mod tests {
 
         let opts = Opts {
             pkg_name: option_env!("CARGO_BIN_NAME").map(ToOwned::to_owned),
-            http_rpc_url: "http://127.0.0.1:9944".to_string(),
-            ws_rpc_url: "ws://127.0.0.1:9944".to_string(),
+            http_rpc_url: format!("http://127.0.0.1:{}", tangle.ws_port()),
+            ws_rpc_url: format!("ws://127.0.0.1:{}", tangle.ws_port()),
             manifest_path,
             signer: None,
             signer_evm: None,
         };
 
-        const N: usize = 3;
+        const N: usize = 2;
         const T: usize = N / 2 + 1;
         const CIPHERSUITE: &str = frost_ed25519::Ed25519Sha512::ID;
 

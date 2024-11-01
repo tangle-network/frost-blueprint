@@ -12,6 +12,9 @@ mod kv;
 /// FROST Signing module
 pub mod sign;
 
+#[cfg(test)]
+mod test_utils;
+
 pub const NETWORK_PROTOCOL: &str = "/zcash/frost/1.0.0";
 
 /// The context that is passed to the service functions

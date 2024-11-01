@@ -5,6 +5,7 @@ use gadget_sdk::{
     runners::{tangle::TangleConfig, BlueprintRunner},
 };
 use sdk::tangle_subxt::*;
+use tracing::Instrument;
 
 #[sdk::main(env)]
 async fn main() -> Result<()> {
@@ -28,7 +29,13 @@ async fn main() -> Result<()> {
     let gossip_handle = sdk::network::setup::start_p2p_network(network_config)?;
     let tangle = env.protocol_specific.tangle()?;
 
-    let service_id = tangle.service_id;
+    let service_id = match tangle.service_id {
+        Some(service_id) => service_id,
+        None => {
+            sdk::error!("Service ID not found, exiting...");
+            return Ok(());
+        }
+    };
 
     // Create your service context
     // Here you can pass any configuration or context that your service needs.
@@ -54,6 +61,7 @@ async fn main() -> Result<()> {
         .job(keygen)
         .job(sign)
         .run()
+        .instrument(span.clone())
         .await?;
     sdk::info!("Exiting...");
     Ok(())
