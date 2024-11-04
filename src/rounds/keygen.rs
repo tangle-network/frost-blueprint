@@ -117,7 +117,7 @@ where
     outgoings
         .send(Outgoing::broadcast(Msg::Round1(round1_package)))
         .await
-        .map_err(|e| IoError::send_message(e))?;
+        .map_err(IoError::send_message)?;
     tracer.msg_sent();
     tracing::debug!(%n, %t, %i, "Waiting for round 1 packages");
     tracer.receive_msgs();
@@ -151,7 +151,7 @@ where
         outgoings
             .send(Outgoing::p2p(to, Msg::Round2(round2_package)))
             .await
-            .map_err(|e| IoError::send_message(e))?;
+            .map_err(IoError::send_message)?;
         tracer.msg_sent();
     }
     drop(span);

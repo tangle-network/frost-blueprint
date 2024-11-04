@@ -1,5 +1,7 @@
 /// FROST Keygen Protocol Rounds
 pub mod keygen;
+/// FROST Signing Protocol Rounds
+pub mod sign;
 /// Traces progress of protocol execution
 pub mod trace;
 
