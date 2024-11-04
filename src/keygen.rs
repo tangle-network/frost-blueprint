@@ -322,7 +322,7 @@ mod tests {
         const T: usize = N / 2 + 1;
         const CIPHERSUITE: &str = frost_ed25519::Ed25519Sha512::ID;
 
-        new_test_ext_blueprint_manager::<N, 1, (), _, _>((), opts, run_test_blueprint_manager)
+        new_test_ext_blueprint_manager::<N, 1, _, _, _>("", opts, run_test_blueprint_manager)
             .await
             .execute_with_async(move |client, handles, svcs| async move {
                 // At this point, blueprint has been deployed, every node has registered

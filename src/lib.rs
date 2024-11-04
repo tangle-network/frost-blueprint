@@ -9,6 +9,8 @@ use sdk::ctx::{KeystoreContext, ServicesContext, TangleClientContext};
 pub mod keygen;
 /// Key-Value Storage module
 mod kv;
+/// FROST round-based module
+pub mod rounds;
 /// FROST Signing module
 pub mod sign;
 

@@ -22,8 +22,8 @@ async fn main() -> Result<()> {
         network_identity,
         my_ecdsa_key.signer().clone(),
         env.bootnodes.clone(),
-        env.bind_addr,
-        env.bind_port,
+        env.target_addr,
+        env.target_port,
         blueprint::NETWORK_PROTOCOL,
     );
     let gossip_handle = sdk::network::setup::start_p2p_network(network_config)?;

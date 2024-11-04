@@ -12,58 +12,6 @@ categories = ["cryptography", "cryptography::cryptocurrencies"]
 keywords = ["tangle", "blueprint", "avs"]
 rust-version = "1.81"
 
-[dependencies]
-tracing = "0.1"
-thiserror = "1.0"
-async-trait = "0.1"
-color-eyre = "0.6"
-structopt = "0.3.26"
-hex = "0.4"
-tokio = { version = "1.39", default-features = false, features = ["full"] }
-tracing-subscriber = { version = "0.3", features = ["parking_lot", "env-filter"] }
-serde = { version = "1.0", default-features = false, features = ["alloc"] }
-serde_json = { version = "1.0", default-features = false, features = ["alloc"] }
-
-# FROST
-frost-core = { version = "2.0", default-features = false, features = ["serialization", "cheater-detection"] }
-frost-ed25519 = { version = "2.0", default-features = false, features = ["serialization", "cheater-detection"] }
-frost-secp256k1 = { version = "2.0", default-features = false, features = ["serialization", "cheater-detection"] }
-
-sled = { version = "0.34", default-features = false, optional = true }
-
-
-[features]
-default = ["std", "kv-sled"]
-std = [
-    "gadget-sdk/std",
-    "frost-core/std",
-    "frost-ed25519/std",
-    "frost-secp256k1/std",
-    "serde_json/std",
-    "serde/std",
-]
-kv-sled = ["sled"]
-kv-mem = []
-
-[dependencies.gadget-sdk]
-version = "0.2.3"
-default-features = false
-path = "../gadget/sdk"
-features = ["getrandom"]
-
-[dev-dependencies.blueprint-test-utils]
-version = "0.1.1"
-default-features = false
-path = "../gadget/blueprint-test-utils"
-features = ["std"]
-
-[dev-dependencies.cargo-tangle]
-version = "0.2"
-path = "../gadget/cli"
-
-[build-dependencies]
-blueprint-metadata = "0.1.6"
-
 [lib]
 path = "src/lib.rs"
 
@@ -82,3 +30,65 @@ manager = { Evm = "FrostBlueprint" }
 #     { arch = "Amd64", os = "Linux", name = "amd64-linux-frost-blueprint" },
 #     { arch = "Arm64", os = "Linux", name = "arm64-linux-frost-blueprint" },
 # ]
+
+[dependencies]
+tracing = "0.1"
+thiserror = "1.0"
+displaydoc = "0.2.5"
+async-trait = "0.1"
+color-eyre = "0.6"
+structopt = "0.3.26"
+hex = "0.4"
+tokio = { version = "^1", default-features = false, features = ["full", "rt-multi-thread"] }
+tracing-subscriber = { version = "0.3", features = ["parking_lot", "env-filter"] }
+serde = { version = "^1", default-features = false, features = ["alloc"] }
+serde_json = { version = "1.0", default-features = false, features = ["alloc"] }
+
+# FROST
+frost-core = { version = "2.0", default-features = false, features = ["serialization", "cheater-detection"] }
+frost-ed25519 = { version = "2.0", default-features = false, features = ["serialization", "cheater-detection"] }
+frost-secp256k1 = { version = "2.0", default-features = false, features = ["serialization", "cheater-detection"] }
+
+sled = { version = "0.34", default-features = false, optional = true }
+round-based = { version = "0.3.0", default-features = false, features = ["derive"] }
+
+
+[dependencies.gadget-sdk]
+version = "0.2.3"
+default-features = false
+path = "../gadget/sdk"
+features = ["getrandom"]
+
+[dev-dependencies]
+tokio = { version = "^1", default-features = false, features = ["full", "rt-multi-thread"] }
+frost-core = { version = "2.0", default-features = false, features = ["serialization", "cheater-detection", "internals"] }
+round-based = { version = "0.3.0", default-features = false, features = ["derive", "dev"] }
+proptest = { version = "1.5.0", default-features = false, features = ["std", "bit-set", "fork", "timeout"] }
+test-strategy = { version = "0.4.0", default-features = false }
+
+
+[dev-dependencies.blueprint-test-utils]
+version = "0.1.1"
+default-features = false
+path = "../gadget/blueprint-test-utils"
+features = ["std"]
+
+[dev-dependencies.cargo-tangle]
+version = "0.2"
+path = "../gadget/cli"
+
+[build-dependencies]
+blueprint-metadata = "0.1.6"
+
+[features]
+default = ["std", "kv-sled"]
+std = [
+    "gadget-sdk/std",
+    "frost-core/std",
+    "frost-ed25519/std",
+    "frost-secp256k1/std",
+    "serde_json/std",
+    "serde/std",
+]
+kv-sled = ["sled"]
+kv-mem = []
