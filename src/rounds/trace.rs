@@ -1,9 +1,9 @@
 //! Traces progress of protocol execution
 //!
-//! Provides [`Tracer`] trait that can be used to trace progress of ongoing MPC protocol execution.
+//! Provides `Tracer` trait that can be used to trace progress of ongoing MPC protocol execution.
 //! For instance, it can be implemented to report progress to the end user.
 //!
-//! Out of box, there's [`PerfProfiler`] which can be used to bechmark a protocol.
+//! Out of box, there's `PerfProfiler` which can be used to bechmark a protocol.
 
 /// Traces progress of protocol execution
 ///

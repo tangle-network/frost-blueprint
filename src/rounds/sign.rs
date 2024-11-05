@@ -86,6 +86,12 @@ pub enum Bug {
 }
 
 /// Run FROST Signing protocol
+#[tracing::instrument(
+    target = "gadget",
+    name = "sign",
+    skip(rng, tracer, party, key_pkg, pub_key_pkg, msg),
+    err
+)]
 pub async fn run<R, C, M>(
     rng: &mut R,
     key_pkg: &KeyPackage<C>,
@@ -118,7 +124,7 @@ where
         .ok_or(Bug::InvalidPartyIndex)?;
 
     tracer.protocol_begins();
-    tracing::debug!(%n, %t, %i, "Signing protocol started");
+    tracing::debug!("Signing protocol started");
     tracer.stage("Setup networking");
     let MpcParty { delivery, .. } = party.into_party();
     let (incomings, mut outgoings) = delivery.split();
@@ -127,12 +133,12 @@ where
     let round2 = router.add_round(RoundInput::<SignatureShare<C>>::broadcast(i, n));
     let mut rounds = router.listen(incomings);
     // Round 1
-    tracing::debug!(%n, %t, %i, "Round 1 started");
+    tracing::debug!("Round 1 started");
     tracer.round_begins();
     tracer.stage("Create Signing Commitments");
     let (signing_nonces, signing_commitments) = commit::<C, _>(key_pkg.signing_share(), rng);
     tracer.stage("Broadcast shares");
-    tracing::debug!(%n, %t, %i, "Broadcasting round 1 package");
+    tracing::debug!("Broadcasting round 1 package");
     tracer.send_msg();
     outgoings
         .send(Outgoing::broadcast(Msg::Round1(
@@ -141,13 +147,13 @@ where
         .await
         .map_err(IoError::send_message)?;
     tracer.msg_sent();
-    tracing::debug!(%n, %t, %i, "Waiting for round 1 packages");
+    tracing::debug!("Waiting for round 1 packages");
     tracer.receive_msgs();
     let other_packages = rounds
         .complete(round1)
         .await
         .map_err(IoError::receive_message)?;
-    tracing::debug!(%n, %t, %i, "Received round 1 packages");
+    tracing::debug!("Received round 1 packages");
     tracer.msgs_received();
     let all_signing_commitments = other_packages
         .into_vec_including_me(signing_commitments)
@@ -166,14 +172,14 @@ where
 
     // Round 2
     tracer.round_begins();
-    tracing::debug!(%n, %t, %i, "Round 2 started");
+    tracing::debug!("Round 2 started");
     tracer.stage("Create Signature Share");
 
     let signing_pkg = SigningPackage::new(all_signing_commitments, msg);
 
     let signature_share =
         sign::<C>(&signing_pkg, &signing_nonces, &key_pkg).map_err(SigningAborted::Frost)?;
-    tracing::debug!(%n, %t, %i, "Broadcasting round 2 package");
+    tracing::debug!("Broadcasting round 2 package");
     tracer.stage("Broadcast signature share");
     tracer.send_msg();
     outgoings
@@ -182,13 +188,13 @@ where
         .map_err(IoError::send_message)?;
     tracer.msg_sent();
 
-    tracing::debug!(%n, %t, %i, "Waiting for round 2 packages");
+    tracing::debug!("Waiting for round 2 packages");
     tracer.receive_msgs();
     let other_packages = rounds
         .complete(round2)
         .await
         .map_err(IoError::receive_message)?;
-    tracing::debug!(%n, %t, %i, "Received round 2 packages");
+    tracing::debug!("Received round 2 packages");
     tracer.msgs_received();
 
     let all_signature_shares = other_packages
@@ -223,7 +229,7 @@ where
         );
         if result.is_err() {
             let who = IdentifierWrapper(*from).as_u16();
-            tracing::warn!(%i, from = %who, "Failed to verify signature share");
+            tracing::warn!(from = %who, "Failed to verify signature share");
             blames.push(who);
         }
     }

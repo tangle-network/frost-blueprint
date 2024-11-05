@@ -40,9 +40,11 @@ color-eyre = "0.6"
 structopt = "0.3.26"
 hex = "0.4"
 tokio = { version = "^1", default-features = false, features = ["full", "rt-multi-thread"] }
+tokio-stream = { version = "0.1", default-features = false }
 tracing-subscriber = { version = "0.3", features = ["parking_lot", "env-filter"] }
 serde = { version = "^1", default-features = false, features = ["alloc"] }
 serde_json = { version = "1.0", default-features = false, features = ["alloc"] }
+rand_chacha = { version = "0.3.1", default-features = false }
 
 # FROST
 frost-core = { version = "2.0", default-features = false, features = ["serialization", "cheater-detection"] }
@@ -54,7 +56,7 @@ round-based = { version = "0.3.0", default-features = false, features = ["derive
 
 
 [dependencies.gadget-sdk]
-version = "0.2.3"
+version = "0.3"
 default-features = false
 path = "../gadget/sdk"
 features = ["getrandom"]
@@ -68,7 +70,7 @@ test-strategy = { version = "0.4.0", default-features = false }
 
 
 [dev-dependencies.blueprint-test-utils]
-version = "0.1.1"
+version = "0.1"
 default-features = false
 path = "../gadget/blueprint-test-utils"
 features = ["std"]
@@ -89,6 +91,7 @@ std = [
     "frost-secp256k1/std",
     "serde_json/std",
     "serde/std",
+    "rand_chacha/std",
 ]
 kv-sled = ["sled"]
 kv-mem = []

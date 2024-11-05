@@ -1,11 +1,7 @@
-use std::collections::BTreeMap;
-
 use api::services::events::JobCalled;
-use frost_core::keys::dkg::round1::Package as Round1Package;
-use frost_core::keys::dkg::round2::Package as Round2Package;
-use frost_core::keys::{dkg, KeyPackage, PublicKeyPackage};
-use frost_core::{Ciphersuite, Identifier, VerifyingKey};
-use gadget_sdk::network::{IdentifierInfo, Network};
+use frost_core::keys::{KeyPackage, PublicKeyPackage};
+use frost_core::{Ciphersuite, VerifyingKey};
+use gadget_sdk::network::Network;
 use gadget_sdk::{self as sdk, random};
 use sdk::ctx::{GossipNetworkContext, ServicesContext, TangleClientContext};
 use sdk::event_listener::tangle::{
@@ -15,6 +11,7 @@ use sdk::event_listener::tangle::{
 use sdk::tangle_subxt::subxt::tx::Signer;
 use sdk::tangle_subxt::tangle_testnet_runtime::api;
 
+use crate::rounds::{delivery, keygen as keygen_protocol};
 use crate::ServiceContext;
 
 #[derive(Debug, thiserror::Error)]
@@ -32,6 +29,8 @@ pub enum Error {
     Config(#[from] sdk::config::Error),
     #[error("Frost error: {0}")]
     Frost(Box<dyn std::error::Error>),
+    #[error("Protocol error: {0}")]
+    Protocol(Box<dyn std::error::Error>),
     #[error(transparent)]
     SerdeJson(#[from] serde_json::Error),
     #[error(transparent)]
@@ -43,6 +42,12 @@ pub enum Error {
 impl<C: Ciphersuite> From<frost_core::Error<C>> for Error {
     fn from(e: frost_core::Error<C>) -> Self {
         Error::Frost(Box::new(e))
+    }
+}
+
+impl<C: Ciphersuite> From<keygen_protocol::Error<C>> for Error {
+    fn from(e: keygen_protocol::Error<C>) -> Self {
+        Error::Protocol(Box::new(e))
     }
 }
 
@@ -85,11 +90,10 @@ pub async fn keygen(
         .iter()
         .map(|(op, _)| op)
         .position(|op| op == &my_key.account_id())
-        .ok_or(Error::SelfNotInOperators)?
-        .saturating_add(1);
+        .ok_or(Error::SelfNotInOperators)?;
 
-    sdk::info!(%n, %i, %ciphersuite, "Keygen");
-    let net = context.gossip_network();
+    sdk::info!(%n, %i, t = %threshold, %ciphersuite, "Keygen");
+    let net = context.gossip_network().clone();
     let rng = random::rand::rngs::OsRng;
     let kv = context.store.clone();
     let key = match ciphersuite.as_str() {
@@ -130,140 +134,27 @@ pub struct KeygenEntry<C: Ciphersuite> {
 }
 
 /// A genaric keygen protocol over any ciphersuite.
-async fn keygen_internal<C: Ciphersuite, R: random::RngCore + random::CryptoRng, N: Network>(
-    rng: R,
-    net: &N,
+#[tracing::instrument(skip(rng, net, kv))]
+async fn keygen_internal<C, R, N>(
+    mut rng: R,
+    net: N,
     kv: crate::kv::SharedDynKVStore<String, Vec<u8>>,
     t: u16,
     n: u16,
     i: u16,
-) -> Result<VerifyingKey<C>, Error> {
-    let identifier_to_u16 = (1..=n)
-        .map(|i| Identifier::try_from(i).map(|id| (id, i)))
-        .collect::<Result<BTreeMap<_, _>, _>>()?;
-    let identifier = frost_core::Identifier::try_from(i)?;
-    assert_eq!(i, identifier_to_u16[&identifier]);
-    let required_msgs = usize::from(n - 1);
-    // Round 1 (Broadcast)
-    sdk::debug!(%i, "Round 1");
-    let (round1_secret_package, round1_package) = dkg::part1::<C, R>(identifier, n, t, rng)?;
-
-    let round1_identifier_info = IdentifierInfo {
-        block_id: None,
-        session_id: None,
-        retry_id: None,
-        task_id: None,
-    };
-    let from = i;
-    let to = None;
-    let round1 = N::build_protocol_message::<Round1Package<C>>(
-        round1_identifier_info.clone(),
-        from,
-        to,
-        &round1_package,
-        None,
-        None,
-    );
-    net.send_message(round1).await?;
-
-    sdk::debug!(%i, "Sent Round 1 Package");
-    // Wait for all round1_package. (n - 1) round1_package.
-    let mut round1_packages = BTreeMap::new();
-
-    sdk::debug!(%i, "Waiting for Round 1 Messages");
-    while let Some(msg) = net.next_message().await {
-        let round1_package: Round1Package<C> = sdk::network::deserialize(&msg.payload)?;
-        let from = frost_core::Identifier::try_from(msg.sender.user_id)?;
-        assert_ne!(from, identifier, "Received its own Round 1 Package");
-        let old = round1_packages.insert(from, round1_package);
-        assert!(
-            old.is_none(),
-            "Received duplicate Round 2 Package from {}",
-            msg.sender.user_id
-        );
-
-        sdk::debug!(
-            %i,
-            from = %msg.sender.user_id,
-            recv = %round1_packages.len(),
-            required = required_msgs,
-            remaining = required_msgs - round1_packages.len(),
-            "Received Round 1 Package"
-        );
-
-        if round1_packages.len() == required_msgs {
-            break;
-        }
-    }
-
-    // Round 1 is done.
-    sdk::debug!(%i, "Round 1 Done");
-
-    // Round 2 (P2P)
-    sdk::debug!(%i, "Round 2");
-    let (round2_secret_package, round2_packages) =
-        dkg::part2(round1_secret_package, &round1_packages)?;
-
-    for (to, round2_package) in round2_packages {
-        let round2_identifier_info = IdentifierInfo {
-            block_id: None,
-            session_id: None,
-            retry_id: None,
-            task_id: None,
-        };
-        let from = i;
-        let to = identifier_to_u16.get(&to).cloned();
-        assert!(to.is_some(), "Unknown identifier: {:?}", to);
-        let round2 = N::build_protocol_message::<Round2Package<C>>(
-            round2_identifier_info.clone(),
-            from,
-            to,
-            &round2_package,
-            None,
-            None,
-        );
-        net.send_message(round2).await?;
-        sdk::debug!(%i, to = ?to, "Sent Round 2 Package P2P");
-    }
-
-    // Wait for all round2_package. (n - 1) round2_package.
-    sdk::debug!(%i, "Waiting for Round 2 Messages");
-    let mut round2_packages = BTreeMap::new();
-    while let Some(msg) = net.next_message().await {
-        let round2_package: Round2Package<C> = sdk::network::deserialize(&msg.payload)?;
-        let from = frost_core::Identifier::try_from(msg.sender.user_id)?;
-        assert_ne!(from, identifier, "Received its own Round 2 Package");
-        let old = round2_packages.insert(from, round2_package);
-        assert!(
-            old.is_none(),
-            "({}) Received duplicate Round 2 Package from {}",
-            i,
-            msg.sender.user_id
-        );
-
-        sdk::debug!(
-            %i,
-            from = %msg.sender.user_id,
-            recv = %round2_packages.len(),
-            required = required_msgs,
-            remaining = required_msgs - round2_packages.len(),
-            "Received Round 2 Package"
-        );
-
-        if round2_packages.len() == required_msgs {
-            break;
-        }
-    }
-
-    // Round 2 is done.
-    sdk::debug!(%i, "Round 2 Done");
-
-    // Part 3, Offline.
-    sdk::debug!(%i, "Round 3 (Offline)");
+) -> Result<VerifyingKey<C>, Error>
+where
+    C: Ciphersuite + Send + Unpin,
+    <<C as Ciphersuite>::Group as frost_core::Group>::Element: Send + Unpin,
+    <<<C as Ciphersuite>::Group as frost_core::Group>::Field as frost_core::Field>::Scalar:
+        Send + Unpin,
+    R: random::RngCore + random::CryptoRng,
+    N: Network + Unpin,
+{
+    let delivery = delivery::NetworkDeliveryWrapper::new(net, i);
+    let party = round_based::MpcParty::connected(delivery);
     let (key_package, public_key_package) =
-        dkg::part3(&round2_secret_package, &round1_packages, &round2_packages)?;
-
-    sdk::debug!(%i, "Round 3 Done");
+        keygen_protocol::run::<R, C, _>(&mut rng, t, n, i, party, None).await?;
     let verifying_key = public_key_package.verifying_key().clone();
     let pubkey = hex::encode(verifying_key.serialize()?);
     sdk::debug!(
@@ -297,10 +188,21 @@ mod tests {
 
     use super::*;
 
+    pub fn setup_testing_log() {
+        use tracing_subscriber::util::SubscriberInitExt;
+        let _ = tracing_subscriber::fmt::SubscriberBuilder::default()
+            .without_time()
+            .with_span_events(tracing_subscriber::fmt::format::FmtSpan::NONE)
+            .with_env_filter(tracing_subscriber::EnvFilter::from_default_env())
+            .with_test_writer()
+            .finish()
+            .try_init();
+    }
+
     #[tokio::test(flavor = "multi_thread")]
     #[allow(clippy::needless_return)]
     async fn keygen() {
-        setup_log();
+        setup_testing_log();
         let tangle = crate::test_utils::run_tangle().unwrap();
         let base_path = std::env::current_dir().expect("Failed to get current directory");
         let base_path = base_path
@@ -318,7 +220,7 @@ mod tests {
             signer_evm: None,
         };
 
-        const N: usize = 2;
+        const N: usize = 3;
         const T: usize = N / 2 + 1;
         const CIPHERSUITE: &str = frost_ed25519::Ed25519Sha512::ID;
 
@@ -347,6 +249,13 @@ mod tests {
                 let threshold = Field::Uint16(T as u16);
                 let job_args = Args::from([ciphersuite, threshold]);
 
+                // Wait till we reach block 20 to ensure all nodes have the same view
+                let mut blocks = client.blocks().subscribe_finalized().await.unwrap();
+                while let Some(Ok(block)) = blocks.next().await {
+                    if block.number() >= 20 {
+                        break;
+                    }
+                }
                 // Next step: submit a job under that service/job id
                 if let Err(err) =
                     submit_job(client, &keypair, service_id, KEYGEN_JOB_ID, job_args).await

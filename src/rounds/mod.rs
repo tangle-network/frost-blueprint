@@ -1,3 +1,5 @@
+/// A custom delivery implementation on top of the gossip network.
+pub mod delivery;
 /// FROST Keygen Protocol Rounds
 pub mod keygen;
 /// FROST Signing Protocol Rounds

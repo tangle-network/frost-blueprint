@@ -1,13 +1,13 @@
-use std::collections::BTreeMap;
-
+use crate::rounds::delivery;
+use crate::rounds::sign as sign_protocol;
+use crate::rounds::IdentifierWrapper;
 use api::services::events::JobCalled;
 use frost_core::keys::{KeyPackage, PublicKeyPackage};
-use frost_core::round1::{commit as frost_commit, SigningCommitments};
-use frost_core::round2::{sign as frost_sign, SignatureShare};
-use frost_core::{
-    aggregate, verify_signature_share, Ciphersuite, Identifier, Signature, SigningPackage,
-};
-use gadget_sdk::network::{IdentifierInfo, Network};
+use frost_core::{Ciphersuite, Signature};
+use gadget_sdk::network::Network;
+use gadget_sdk::random::rand::seq::IteratorRandom;
+use gadget_sdk::random::SeedableRng;
+use gadget_sdk::subxt_core::ext::sp_core::keccak_256;
 use gadget_sdk::{self as sdk, random};
 use sdk::ctx::{GossipNetworkContext, ServicesContext, TangleClientContext};
 use sdk::event_listener::tangle::{
@@ -27,6 +27,8 @@ pub enum Error {
     KeyNotFound,
     #[error("Self not in operators")]
     SelfNotInOperators,
+    #[error("Self not in signers")]
+    SelfNotInSigners,
     #[error("Verifiying Share not found")]
     VerifyingShareNotFound,
     #[error(transparent)]
@@ -37,6 +39,8 @@ pub enum Error {
     Json(#[from] serde_json::Error),
     #[error(transparent)]
     Config(#[from] sdk::config::Error),
+    #[error("Protocol error: {0}")]
+    Protocol(Box<dyn std::error::Error>),
     #[error("Frost error: {0}")]
     Frost(Box<dyn std::error::Error>),
     #[error(transparent)]
@@ -48,6 +52,12 @@ pub enum Error {
 impl<C: Ciphersuite> From<frost_core::Error<C>> for Error {
     fn from(e: frost_core::Error<C>) -> Self {
         Error::Frost(Box::new(e))
+    }
+}
+
+impl<C: Ciphersuite> From<sign_protocol::Error<C>> for Error {
+    fn from(e: sign_protocol::Error<C>) -> Self {
+        Error::Protocol(Box::new(e))
     }
 }
 
@@ -75,6 +85,7 @@ impl<C: Ciphersuite> From<frost_core::Error<C>> for Error {
         post_processor = services_post_processor,
     )
 )]
+#[tracing::instrument(skip_all, parent = context.config.span.clone(), err)]
 pub async fn sign(
     pubkey: Vec<u8>,
     msg: Vec<u8>,
@@ -95,24 +106,23 @@ pub async fn sign(
         .iter()
         .map(|(op, _)| op)
         .position(|op| op == &my_key.account_id())
-        .ok_or(Error::SelfNotInOperators)?
-        .saturating_add(1);
+        .ok_or(Error::SelfNotInOperators)?;
 
     sdk::info!(%n, %i, %ciphersuite, "Signing");
-    let net = context.gossip_network();
+    let net = context.gossip_network().clone();
     let rng = random::rand::rngs::OsRng;
     let signature = match ciphersuite {
         frost_ed25519::Ed25519Sha512::ID => {
             let entry: crate::keygen::KeygenEntry<frost_ed25519::Ed25519Sha512> =
                 serde_json::from_value(info_json_value["entry"].clone())?;
-            signing_internal(rng, net, entry.keypkg, entry.pubkeypkg, &[], msg)
+            signing_internal(rng, net, entry.keypkg, entry.pubkeypkg, msg)
                 .await?
                 .serialize()?
         }
         frost_secp256k1::Secp256K1Sha256::ID => {
             let entry: crate::keygen::KeygenEntry<frost_secp256k1::Secp256K1Sha256> =
                 serde_json::from_value(info_json_value["entry"].clone())?;
-            signing_internal(rng, net, entry.keypkg, entry.pubkeypkg, &[], msg)
+            signing_internal(rng, net, entry.keypkg, entry.pubkeypkg, msg)
                 .await?
                 .serialize()?
         }
@@ -123,175 +133,58 @@ pub async fn sign(
 }
 
 /// A genaric signing protocol over a given ciphersuite.
-async fn signing_internal<C: Ciphersuite, R: random::RngCore + random::CryptoRng, N: Network>(
+#[tracing::instrument(skip(rng, net, key_pkg, pub_key_pkg, msg))]
+async fn signing_internal<C, R, N>(
     mut rng: R,
-    net: &N,
-    keypkg: KeyPackage<C>,
-    pubkeypkg: PublicKeyPackage<C>,
-    signers: &[u16],
+    net: N,
+    key_pkg: KeyPackage<C>,
+    pub_key_pkg: PublicKeyPackage<C>,
     msg: Vec<u8>,
-) -> Result<Signature<C>, Error> {
+) -> Result<Signature<C>, Error>
+where
+    C: Ciphersuite + Send + Unpin,
+    <<C as Ciphersuite>::Group as frost_core::Group>::Element: Send + Unpin,
+    <<<C as Ciphersuite>::Group as frost_core::Group>::Field as frost_core::Field>::Scalar:
+        Send + Unpin,
+    R: random::RngCore + random::CryptoRng,
+    N: Network + Unpin,
+{
+    let pub_key = pub_key_pkg.verifying_key().serialize()?;
+    let signers_seed = {
+        let mut key = pub_key.clone();
+        key.extend_from_slice(&msg);
+        keccak_256(&pub_key)
+    };
+    let n = pub_key_pkg.verifying_shares().len() as u16;
+    let mut signers_rng = rand_chacha::ChaChaRng::from_seed(signers_seed);
+    let t = *key_pkg.min_signers();
+    let i = IdentifierWrapper(*key_pkg.identifier()).as_u16();
+    let signers = (0..n).choose_multiple(&mut signers_rng, usize::from(t));
+
+    if !signers.contains(&i) {
+        return Err(Error::SelfNotInOperators);
+    }
     assert_eq!(
         signers.len(),
-        usize::from(*keypkg.min_signers()),
+        usize::from(*key_pkg.min_signers()),
         "Invalid number of signers"
     );
-    let identifier_to_u16 = signers
-        .iter()
-        .map(|i| Identifier::try_from(*i).map(|id| (id, *i)))
-        .collect::<Result<BTreeMap<_, _>, _>>()?;
-    let identifier = keypkg.identifier();
-
-    let i = identifier_to_u16
-        .get(identifier)
-        .copied()
-        .ok_or(Error::SelfNotInOperators)?;
-    let t = signers.len();
-    let required_msgs = t - 1;
-    // Round 1 (Broadcast)
-    sdk::debug!(%i, "Round 1");
-    let (signing_nonces, signing_commitments) =
-        frost_commit::<C, R>(keypkg.signing_share(), &mut rng);
-
-    let round1_identifier_info = IdentifierInfo {
-        block_id: None,
-        session_id: None,
-        retry_id: None,
-        task_id: None,
-    };
-    let from = i;
-    let to = None;
-    let round1 = N::build_protocol_message::<SigningCommitments<C>>(
-        round1_identifier_info.clone(),
-        from,
-        to,
-        &signing_commitments,
+    let delivery = delivery::NetworkDeliveryWrapper::new(net, i);
+    let party = round_based::MpcParty::connected(delivery);
+    let signature = sign_protocol::run::<R, C, _>(
+        &mut rng,
+        &key_pkg,
+        &pub_key_pkg,
+        &signers,
+        &msg,
+        party,
         None,
-        None,
-    );
-    net.send_message(round1).await?;
+    )
+    .await?;
 
-    sdk::debug!(%i, "Sent Round 1 Package");
-    // Wait for all messages. (t - 1)
-    let mut all_signing_commitments = BTreeMap::new();
-
-    sdk::debug!(%i, "Waiting for Round 1 Messages");
-    while let Some(msg) = net.next_message().await {
-        let com: SigningCommitments<C> = sdk::network::deserialize(&msg.payload)?;
-        let from = frost_core::Identifier::try_from(msg.sender.user_id)?;
-        assert_ne!(&from, identifier, "Received its own Round 1 Package");
-        let old = all_signing_commitments.insert(from, com);
-        assert!(
-            old.is_none(),
-            "Received duplicate Round 2 Package from {}",
-            msg.sender.user_id
-        );
-
-        sdk::debug!(
-            %i,
-            from = %msg.sender.user_id,
-            recv = %all_signing_commitments.len(),
-            required = required_msgs,
-            remaining = required_msgs - all_signing_commitments.len(),
-            "Received Round 1 Package"
-        );
-
-        if all_signing_commitments.len() == required_msgs {
-            break;
-        }
-    }
-
-    // Add self to the list.
-    all_signing_commitments.insert(*identifier, signing_commitments);
-
-    // Round 1 is done.
-    sdk::debug!(%i, "Round 1 Done");
-
-    // Sign the message and send it to the network.
-    let signing_pkg = SigningPackage::new(all_signing_commitments, &msg);
-    let signature_share = frost_sign::<C>(&signing_pkg, &signing_nonces, &keypkg)?;
-
-    // Round 2 (Broadcast)
-    sdk::debug!(%i, "Round 2");
-
-    let round2_identifier_info = IdentifierInfo {
-        block_id: None,
-        session_id: None,
-        retry_id: None,
-        task_id: None,
-    };
-    let from = i;
-    let to = None;
-    let round2 = N::build_protocol_message::<SignatureShare<C>>(
-        round2_identifier_info.clone(),
-        from,
-        to,
-        &signature_share,
-        None,
-        None,
-    );
-    net.send_message(round2).await?;
-
-    sdk::debug!(%i, "Sent Round 2 Package");
-    sdk::debug!(%i, "Waiting for Round 2 Messages");
-    let mut all_shares = BTreeMap::new();
-    while let Some(msg) = net.next_message().await {
-        let shares: SignatureShare<C> = sdk::network::deserialize(&msg.payload)?;
-        let from = frost_core::Identifier::try_from(msg.sender.user_id)?;
-        assert_ne!(&from, identifier, "Received its own Round 2 Package");
-        let old = all_shares.insert(from, shares);
-        assert!(
-            old.is_none(),
-            "Received duplicate Round 2 Package from {}",
-            msg.sender.user_id
-        );
-
-        sdk::debug!(
-            %i,
-            from = %msg.sender.user_id,
-            recv = %all_shares.len(),
-            required = required_msgs,
-            remaining = required_msgs - all_shares.len(),
-            "Received Round 2 Package"
-        );
-
-        if all_shares.len() == required_msgs {
-            break;
-        }
-    }
-
-    // Include self in the list.
-    all_shares.insert(*identifier, signature_share);
-
-    sdk::debug!(%i, "Round 2 Done");
-
-    sdk::debug!(%i, "Round 3 (Offline)");
-    // Verify the shares.
-    for (from, share) in all_shares.iter() {
-        let verifying_share = pubkeypkg
-            .verifying_shares()
-            .get(from)
-            .ok_or(Error::VerifyingShareNotFound)?;
-        let result = verify_signature_share(
-            identifier.clone(),
-            verifying_share,
-            share,
-            &signing_pkg,
-            keypkg.verifying_key(),
-        );
-        if result.is_err() {
-            let who = identifier_to_u16[from];
-            sdk::warn!(%i, from = %who, "Failed to verify signature share");
-            // TODO: blames
-        }
-    }
-    // Aggregate the signature shares.
-    let signature = aggregate::<C>(&signing_pkg, &all_shares, &pubkeypkg)?;
-
-    sdk::debug!(%i, "Round 3 Done");
     sdk::debug!(
         %i,
-        pubkey = %hex::encode(pubkeypkg.verifying_key().serialize()?),
+        pubkey = %hex::encode(pub_key),
         signature = %hex::encode(signature.serialize()?),
         msg = %hex::encode(&msg),
         "Signing Done"
