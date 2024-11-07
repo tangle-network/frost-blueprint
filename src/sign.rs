@@ -17,7 +17,7 @@ use sdk::event_listener::tangle::{
 use sdk::tangle_subxt::subxt::tx::Signer;
 use sdk::tangle_subxt::tangle_testnet_runtime::api;
 
-use crate::ServiceContext;
+use crate::FrostContext;
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
@@ -80,19 +80,15 @@ impl<C: Ciphersuite> From<sign_protocol::Error<C>> for Error {
     params(pubkey, msg),
     result(_),
     event_listener(
-        listener = TangleEventListener::<ServiceContext, JobCalled>,
+        listener = TangleEventListener::<FrostContext, JobCalled>,
         pre_processor = services_pre_processor,
         post_processor = services_post_processor,
     )
 )]
 #[tracing::instrument(skip_all, parent = context.config.span.clone(), err)]
-pub async fn sign(
-    pubkey: Vec<u8>,
-    msg: Vec<u8>,
-    context: ServiceContext,
-) -> Result<Vec<u8>, Error> {
+pub async fn sign(pubkey: Vec<u8>, msg: Vec<u8>, context: FrostContext) -> Result<Vec<u8>, Error> {
     let pubkey_hex = hex::encode(&pubkey);
-    let kv = &context.store;
+    let kv = context.store();
     let raw_info = kv.get(&pubkey_hex)?.ok_or(Error::KeyNotFound)?;
     let info_json_value = serde_json::from_slice::<serde_json::Value>(&raw_info)?;
     let ciphersuite = info_json_value["ciphersuite"]

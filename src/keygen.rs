@@ -12,7 +12,7 @@ use sdk::tangle_subxt::subxt::tx::Signer;
 use sdk::tangle_subxt::tangle_testnet_runtime::api;
 
 use crate::rounds::{delivery, keygen as keygen_protocol};
-use crate::ServiceContext;
+use crate::FrostContext;
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
@@ -71,7 +71,7 @@ impl<C: Ciphersuite> From<keygen_protocol::Error<C>> for Error {
     params(ciphersuite, threshold),
     result(_),
     event_listener(
-        listener = TangleEventListener::<ServiceContext, JobCalled>,
+        listener = TangleEventListener::<FrostContext, JobCalled>,
         pre_processor = services_pre_processor,
         post_processor = services_post_processor,
     )
@@ -80,7 +80,7 @@ impl<C: Ciphersuite> From<keygen_protocol::Error<C>> for Error {
 pub async fn keygen(
     ciphersuite: String,
     threshold: u16,
-    context: ServiceContext,
+    context: FrostContext,
 ) -> Result<Vec<u8>, Error> {
     let client = context.tangle_client().await?;
     let operators_with_restake = context.current_service_operators(&client).await?;
@@ -95,7 +95,7 @@ pub async fn keygen(
     sdk::info!(%n, %i, t = %threshold, %ciphersuite, "Keygen");
     let net = context.gossip_network().clone();
     let rng = random::rand::rngs::OsRng;
-    let kv = context.store.clone();
+    let kv = context.store();
     let key = match ciphersuite.as_str() {
         frost_ed25519::Ed25519Sha512::ID => keygen_internal::<frost_ed25519::Ed25519Sha512, _, _>(
             rng,
