@@ -133,7 +133,7 @@ jobs:
         run: forge update && forge build
 
       - name: Download Tangle Node
-        uses: nguyenngoclongdev/release-downloader@v1
+        uses: robinraju/release-downloader@v1
         with:
           repository: 'tangle-network/tangle'
           # A flag to set the download target as latest release
