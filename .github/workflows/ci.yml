@@ -166,6 +166,10 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
       - name: Setup Tangle Node
         run: |
+          mkdir -p $HOME/.local/bin
+          # Check if the downloaded file is executable
+          ls -l tangle-testnet-manual-seal-linux-amd64
+          # Move the downloaded file to the bin directory
           mv tangle-testnet-manual-seal-linux-amd64 $HOME/.local/bin/tangle
           chmod +x $HOME/.local/bin/tangle
           # Add the Tangle node to the PATH
