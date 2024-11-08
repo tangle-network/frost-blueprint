@@ -155,11 +155,6 @@ jobs:
           tarBall: false
           # Download the attached zipball (*.zip)
           zipBall: false
-          # Relative path under $GITHUB_WORKSPACE to place the downloaded file(s)
-          # It will create the target directory automatically if not present
-          # eg: out-file-path: "my-downloads" => It will create directory $GITHUB_WORKSPACE/my-downloads
-          out-file-path: 'tangle/target/release'
-
           # A flag to set if the downloaded assets are archives and should be extracted
           # Checks all downloaded files if they end with zip, tar or tar.gz and extracts them, if true.
           # Prints a warning if enabled but file is not an archive - but does not fail.
