@@ -155,8 +155,6 @@ jobs:
           tarBall: false
           # Download the attached zipball (*.zip)
           zipBall: false
-          # Download the published release info (*.json)
-          publishedReleaseInfo: false
           # Relative path under $GITHUB_WORKSPACE to place the downloaded file(s)
           # It will create the target directory automatically if not present
           # eg: out-file-path: "my-downloads" => It will create directory $GITHUB_WORKSPACE/my-downloads
@@ -170,7 +168,7 @@ jobs:
           # Github access token to download files from private repositories
           # https://docs.github.com/en/actions/configuring-and-managing-workflows/creating-and-storing-encrypted-secrets
           # eg: token: ${{ secrets.MY_TOKEN }}
-          token: ${{ secrets.MY_TOKEN }}
+          token: ${{ secrets.GITHUB_TOKEN }}
       - name: Rename Tangle Node
         run: mv tangle/target/release/tangle-testnet-manual-seal-linux-amd64 tangle/target/release/tangle
       - name: Run E2E tests
