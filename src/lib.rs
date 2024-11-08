@@ -42,7 +42,7 @@ impl FrostContext {
     /// Create a new service context
     pub fn new(config: sdk::config::StdGadgetConfiguration) -> eyre::Result<Self> {
         let network_identity = {
-            let ed25519 = config.first_ed25519_signer()?.signer().clone();
+            let ed25519 = *config.first_ed25519_signer()?.signer();
             sdk::libp2p::identity::Keypair::ed25519_from_bytes(ed25519.seed())?
         };
         let my_ecdsa_key = config.first_ecdsa_signer()?;

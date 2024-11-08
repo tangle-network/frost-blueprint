@@ -154,14 +154,13 @@ where
 {
     let n = participants.len();
     let i = participants
-        .iter()
-        .map(|(_, k)| k)
+        .values()
         .position(|k| k == &me)
         .ok_or(Error::SelfNotInOperators)?;
 
     let n = u16::try_from(n)?;
     let i = u16::try_from(i)?;
-    tracing::span::Span::current().record("i", &i);
+    tracing::span::Span::current().record("i", i);
 
     let parties: BTreeMap<u16, _> = participants
         .into_iter()
@@ -172,7 +171,7 @@ where
     let party = round_based::MpcParty::connected(delivery);
     let (key_package, public_key_package) =
         keygen_protocol::run::<R, C, _>(&mut rng, t, n, i, party, None).await?;
-    let verifying_key = public_key_package.verifying_key().clone();
+    let verifying_key = *public_key_package.verifying_key();
     let pubkey = hex::encode(verifying_key.serialize()?);
     sdk::debug!(%pubkey, "Keygen Done");
     let entry = serde_json::json!({

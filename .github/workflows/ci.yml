@@ -178,5 +178,7 @@ jobs:
           # Check the Tangle node version
           tangle --version
 
+      - name: Build Blueprint
+        run: cargo build --features e2e
       - name: Run E2E tests
         run: cargo nextest run e2e --features e2e --nocapture

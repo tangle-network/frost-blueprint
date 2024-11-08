@@ -189,7 +189,7 @@ where
     let signers = participants
         .iter()
         .enumerate()
-        .map(|(i, (_, v))| (i as u16, v.clone()))
+        .map(|(i, (_, v))| (i as u16, *v))
         .choose_multiple(&mut signers_rng, usize::from(t));
 
     let selected_parties: BTreeMap<u16, _> = signers.into_iter().collect();

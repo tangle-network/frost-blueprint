@@ -30,7 +30,6 @@ where
         let mux = NetworkMultiplexer::new(network);
         // By default, we create 4 substreams for each party.
         let sub_streams = (1..5)
-            .into_iter()
             .map(|i| {
                 let key = StreamKey {
                     // This is a dummy task hash, it should be replaced with the actual task hash
@@ -102,47 +101,45 @@ where
     type Item = Result<Incoming<M>, gadget_sdk::Error>;
 
     fn poll_next(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
-        loop {
-            let sub_streams = self.sub_streams.values();
-            // pull all substreams
-            let mut messages = Vec::new();
-            for sub_stream in sub_streams {
-                let p = sub_stream.next_message().poll_unpin(cx);
-                let m = match p {
-                    Poll::Ready(Some(msg)) => msg,
-                    _ => continue,
-                };
-                let msg = network::deserialize::<M>(&m.payload)?;
-                messages.push((m.sender.user_id, m.recipient, msg));
-            }
+        let sub_streams = self.sub_streams.values();
+        // pull all substreams
+        let mut messages = Vec::new();
+        for sub_stream in sub_streams {
+            let p = sub_stream.next_message().poll_unpin(cx);
+            let m = match p {
+                Poll::Ready(Some(msg)) => msg,
+                _ => continue,
+            };
+            let msg = network::deserialize::<M>(&m.payload)?;
+            messages.push((m.sender.user_id, m.recipient, msg));
+        }
 
-            // Sort the incoming messages by round.
-            messages.sort_by_key(|(_, _, msg)| msg.round());
+        // Sort the incoming messages by round.
+        messages.sort_by_key(|(_, _, msg)| msg.round());
 
-            let this = self.get_mut();
-            // Push all messages to the incoming queue
-            messages
-                .into_iter()
-                .map(|(sender, recipient, msg)| Incoming {
-                    id: this.next_msg_id.next(),
-                    sender,
-                    msg_type: match recipient {
-                        Some(_) => MessageType::P2P,
-                        None => MessageType::Broadcast,
-                    },
-                    msg,
-                })
-                .for_each(|m| this.incoming_queue.push_back(m));
-            // Reorder the incoming queue by round message.
-            let maybe_msg = this.incoming_queue.pop_front();
-            if let Some(msg) = maybe_msg {
-                return Poll::Ready(Some(Ok(msg)));
-            } else {
-                // No message in the queue, and no message in the substreams.
-                // Tell the network to wake us up when a new message arrives.
-                cx.waker().wake_by_ref();
-                return Poll::Pending;
-            }
+        let this = self.get_mut();
+        // Push all messages to the incoming queue
+        messages
+            .into_iter()
+            .map(|(sender, recipient, msg)| Incoming {
+                id: this.next_msg_id.next(),
+                sender,
+                msg_type: match recipient {
+                    Some(_) => MessageType::P2P,
+                    None => MessageType::Broadcast,
+                },
+                msg,
+            })
+            .for_each(|m| this.incoming_queue.push_back(m));
+        // Reorder the incoming queue by round message.
+        let maybe_msg = this.incoming_queue.pop_front();
+        if let Some(msg) = maybe_msg {
+            Poll::Ready(Some(Ok(msg)))
+        } else {
+            // No message in the queue, and no message in the substreams.
+            // Tell the network to wake us up when a new message arrives.
+            cx.waker().wake_by_ref();
+            Poll::Pending
         }
     }
 }
@@ -200,7 +197,7 @@ where
             let p = substream.send_message(protocol_message).poll_unpin(cx);
             match ready!(p) {
                 Ok(()) => continue,
-                Err(e) => return Poll::Ready(Err(e.into())),
+                Err(e) => return Poll::Ready(Err(e)),
             }
         }
         Poll::Ready(Ok(()))
