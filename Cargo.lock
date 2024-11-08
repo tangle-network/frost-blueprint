@@ -1773,6 +1773,8 @@ dependencies = [
 [[package]]
 name = "blueprint-manager"
 version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c4b6c16a66ff9b9eb98f5c240c62c5bf46ae9c0509c2af0a982be9a1e9a7459c"
 dependencies = [
  "async-trait",
  "auto_impl",
@@ -1805,7 +1807,7 @@ checksum = "4f8754ff7a709cf0643f82093fff582192a36afe3b075cde8e752ad9e39d35ed"
 dependencies = [
  "cargo_metadata",
  "fs2",
- "gadget-blueprint-proc-macro-core 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
+ "gadget-blueprint-proc-macro-core",
  "rustdoc-types",
  "serde",
  "serde_json",
@@ -1815,6 +1817,8 @@ dependencies = [
 [[package]]
 name = "blueprint-test-utils"
 version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d945bffcc6e7e73a4b1216041d9ca7dabf5ef68f8a4aa6f9737693d35cb9ceb0"
 dependencies = [
  "alloy-contract",
  "alloy-primitives 0.7.7",
@@ -2065,7 +2069,9 @@ dependencies = [
 
 [[package]]
 name = "cargo-tangle"
-version = "0.2.2"
+version = "0.2.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bbfd20f76528ee82b3f018cb25e6bd1c8b27545a59a2a0e3f2786e31f1ceb95e"
 dependencies = [
  "alloy-json-abi",
  "alloy-network",
@@ -2079,7 +2085,7 @@ dependencies = [
  "clap-cargo",
  "color-eyre",
  "escargot",
- "gadget-blueprint-proc-macro-core 0.1.5",
+ "gadget-blueprint-proc-macro-core",
  "gadget-sdk",
  "hex",
  "k256",
@@ -4677,24 +4683,17 @@ dependencies = [
 
 [[package]]
 name = "gadget-blueprint-proc-macro"
-version = "0.3.0"
+version = "0.3.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9279fa5ac3579da5e1c5467c395aae4c910cc63a702fcae097d529687398a4b7"
 dependencies = [
- "gadget-blueprint-proc-macro-core 0.1.5",
+ "gadget-blueprint-proc-macro-core",
  "indexmap 2.6.0",
  "itertools 0.13.0",
  "proc-macro2",
  "quote",
  "serde_json",
  "syn 2.0.87",
-]
-
-[[package]]
-name = "gadget-blueprint-proc-macro-core"
-version = "0.1.5"
-dependencies = [
- "cid",
- "ethereum-types",
- "serde",
 ]
 
 [[package]]
@@ -4711,6 +4710,8 @@ dependencies = [
 [[package]]
 name = "gadget-context-derive"
 version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c2f15fa82798ae66fec9bea17791a5f37f200ed9803158b08180fd6ba85737c1"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -4720,6 +4721,8 @@ dependencies = [
 [[package]]
 name = "gadget-io"
 version = "0.0.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8ff8d951c0776ee79a2594634f49f9f6b6006eff55ed7c61b033c84b33f4f839"
 dependencies = [
  "cfg-if",
  "clap 4.5.20",
@@ -4740,7 +4743,9 @@ dependencies = [
 
 [[package]]
 name = "gadget-sdk"
-version = "0.3.0"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "155e6e50f8d4651766c2d597132b421cc19f23fddcde752f8014363b98140de0"
 dependencies = [
  "alloy-contract",
  "alloy-network",
@@ -4770,7 +4775,7 @@ dependencies = [
  "failure",
  "futures",
  "gadget-blueprint-proc-macro",
- "gadget-blueprint-proc-macro-core 0.1.5",
+ "gadget-blueprint-proc-macro-core",
  "gadget-context-derive",
  "gadget-io",
  "getrandom",
