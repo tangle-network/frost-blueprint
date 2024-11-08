@@ -27,8 +27,9 @@ manager = { Evm = "FrostBlueprint" }
 # repo = "frost-blueprint"
 # tag = "0.1.0"
 # binaries = [
-#     { arch = "Amd64", os = "Linux", name = "amd64-linux-frost-blueprint" },
-#     { arch = "Arm64", os = "Linux", name = "arm64-linux-frost-blueprint" },
+#     { arch = "Arm64", os = "Macos", name = "frost-blueprint-aarch64-apple-darwin.tar.xz" },
+#     { arch = "Amd64", os = "Macos", name = "frost-blueprint-x86_64-apple-darwin.tar.xz" },
+#     { arch = "Amd64", os = "Macos", name = "frost-blueprint-x86_64-unknown-linux-gnu.tar.xz" },
 # ]
 
 [dependencies]
@@ -56,9 +57,8 @@ round-based = { version = "0.3.0", default-features = false, features = ["derive
 
 
 [dependencies.gadget-sdk]
-version = "0.3"
+version = "0.4"
 default-features = false
-path = "../gadget/sdk"
 features = ["getrandom"]
 
 [dev-dependencies]
@@ -68,16 +68,8 @@ round-based = { version = "0.3.0", default-features = false, features = ["derive
 proptest = { version = "1.5.0", default-features = false, features = ["std", "bit-set", "fork", "timeout"] }
 test-strategy = { version = "0.4.0", default-features = false }
 
-
-[dev-dependencies.blueprint-test-utils]
-version = "0.1"
-default-features = false
-path = "../gadget/blueprint-test-utils"
-features = ["std"]
-
-[dev-dependencies.cargo-tangle]
-version = "0.2"
-path = "../gadget/cli"
+cargo-tangle = "0.2"
+blueprint-test-utils = { version = "0.1", default-features = false, features = ["std"] }
 
 [build-dependencies]
 blueprint-metadata = "0.1.6"
@@ -95,3 +87,11 @@ std = [
 ]
 kv-sled = ["sled"]
 kv-mem = []
+
+# Internal features for end-to-end tests
+e2e = []
+
+# The profile that 'dist' will build with
+[profile.dist]
+inherits = "release"
+lto = "thin"

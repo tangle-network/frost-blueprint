@@ -33,7 +33,7 @@ pub enum IoError {
     ReceiveMessage(#[cfg_attr(feature = "std", source)] BoxedError),
     /// got eof while recieving messages
     ReceiveMessageEof,
-    /// route received message (possibly malicious behavior): {0}
+    /// route received message (possibly malicious behavior): {0} ({0:?})
     RouteReceivedError(
         #[cfg_attr(feature = "std", source)]
         router_error::CompleteRoundError<simple_store::RoundInputError, Infallible>,
@@ -93,7 +93,7 @@ impl<C: Ciphersuite> Copy for IdentifierWrapper<C> {}
 
 impl<C: Ciphersuite> core::fmt::Debug for IdentifierWrapper<C> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        write!(f, "{:?}", self)
+        write!(f, "{:?}", self.0)
     }
 }
 
@@ -105,7 +105,7 @@ impl<C: Ciphersuite> core::hash::Hash for IdentifierWrapper<C> {
 
 impl<C: Ciphersuite> Clone for IdentifierWrapper<C> {
     fn clone(&self) -> Self {
-        Self(self.0.clone())
+        *self
     }
 }
 
@@ -117,7 +117,7 @@ impl<C: Ciphersuite> PartialEq for IdentifierWrapper<C> {
 
 impl<C: Ciphersuite> PartialOrd for IdentifierWrapper<C> {
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-        self.0.partial_cmp(&other.0)
+        Some(self.cmp(other))
     }
 }
 

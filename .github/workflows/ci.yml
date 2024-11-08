@@ -1,0 +1,183 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [ main ]
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+concurrency:
+  group: rust-validation-${{ github.head_ref }}
+  cancel-in-progress: true
+
+env:
+  RUST_BACKTRACE: full
+  RUST_LOG: "gadget=debug"
+  CARGO_TERM_COLOR: always
+  TANGLE_RELEASE: "v1.2.3"
+
+jobs:
+  fmt:
+    name: Rustfmt
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@nightly
+        with:
+          toolchain: nightly-2024-10-13
+          components: rustfmt
+
+
+      - name: Check Formatting
+        run: cargo fmt -- --check
+
+  lint:
+    timeout-minutes: 120
+    name: Clippy
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: nightly
+
+      - name: Verify Forge installation
+        run: forge --version
+
+      - uses: dtolnay/rust-toolchain@nightly
+        with:
+          toolchain: nightly-2024-10-13
+          components: clippy
+
+      - uses: swatinem/rust-cache@v2
+        with:
+          cache-on-failure: "true"
+
+      - name: Forge build
+        run: forge update && forge build
+
+      - name: Run Clippy
+        run: cargo clippy --tests --examples -- -D warnings
+
+  test:
+    timeout-minutes: 90
+    name: Unit tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: nightly
+
+      - name: Verify Forge installation
+        run: forge --version
+
+      - uses: dtolnay/rust-toolchain@nightly
+        with:
+          toolchain: nightly-2024-10-13
+          components: clippy
+
+      - uses: swatinem/rust-cache@v2
+        with:
+          cache-on-failure: "true"
+
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: nextest
+
+      - name: Forge build
+        run: forge update && forge build
+
+      - name: tests
+        run: cargo nextest run
+
+  e2e:
+    timeout-minutes: 90
+    name: End-to-End tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: nightly
+
+      - name: Verify Forge installation
+        run: forge --version
+
+      - uses: dtolnay/rust-toolchain@nightly
+        with:
+          toolchain: nightly-2024-10-13
+          components: clippy
+
+      - uses: swatinem/rust-cache@v2
+        with:
+          cache-on-failure: "true"
+
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: nextest
+
+      - name: Forge build
+        run: forge update && forge build
+
+      - name: Download Tangle Node
+        uses: robinraju/release-downloader@v1
+        with:
+          repository: 'tangle-network/tangle'
+          # A flag to set the download target as latest release
+          # The default value is 'false'
+          latest: false
+          # A flag to download from prerelease. It should be combined with latest flag.
+          # The default value is 'false'
+          preRelease: false
+          # The github tag. e.g: v1.0.1
+          # Download assets from a specific tag/version
+          tag: ${{ env.TANGLE_RELEASE }}
+
+          # The name of the file to download.
+          # Use this field only to specify filenames other than tarball or zipball, if any.
+          # Supports wildcard pattern (eg: '*', '*.deb', '*.zip' etc..)
+          fileName: 'tangle-testnet-manual-seal-linux-amd64'
+
+          # Download the attached tarball (*.tar.gz)
+          tarBall: false
+          # Download the attached zipball (*.zip)
+          zipBall: false
+          # A flag to set if the downloaded assets are archives and should be extracted
+          # Checks all downloaded files if they end with zip, tar or tar.gz and extracts them, if true.
+          # Prints a warning if enabled but file is not an archive - but does not fail.
+          extract: true
+
+          # Github access token to download files from private repositories
+          # https://docs.github.com/en/actions/configuring-and-managing-workflows/creating-and-storing-encrypted-secrets
+          # eg: token: ${{ secrets.MY_TOKEN }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Setup Tangle Node
+        run: |
+          mkdir -p $HOME/.local/bin
+          # Check if the downloaded file is executable
+          ls -l tangle-testnet-manual-seal-linux-amd64
+          # Move the downloaded file to the bin directory
+          mv tangle-testnet-manual-seal-linux-amd64 $HOME/.local/bin/tangle
+          chmod +x $HOME/.local/bin/tangle
+          # Add the Tangle node to the PATH
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+          # Check the Tangle node version
+          tangle --version
+
+      - name: Build Blueprint
+        run: cargo build --features e2e
+      - name: Run E2E tests
+        run: cargo nextest run e2e --features e2e --nocapture

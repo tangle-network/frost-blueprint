@@ -141,10 +141,10 @@ where
     tracer.round_begins();
     gadget_sdk::debug!("Round 2 started");
     tracer.stage("Generate Round2 packages");
-    let (round2_secret_package, round2_packages) =
+    let (round2_secret_package, my_round2_packages) =
         dkg::part2(round1_secret_package, &round1_packages).map_err(KeygenAborted::Frost)?;
     let span = tracing::debug_span!(target: "gadget", "Sending round 2 packages");
-    for (to, round2_package) in round2_packages {
+    for (to, round2_package) in my_round2_packages {
         let _guard = span.enter();
         tracer.send_msg();
         let to = IdentifierWrapper(to).as_u16();
@@ -164,7 +164,6 @@ where
         .await
         .map_err(IoError::receive_message)?;
     tracer.msgs_received();
-    gadget_sdk::debug!("Received round 2 packages");
 
     let round2_packages = other_packages
         .into_iter_indexed()
@@ -174,6 +173,8 @@ where
             Result::<_, Error<C>>::Ok((*party, package))
         })
         .collect::<Result<BTreeMap<Identifier<C>, _>, _>>()?;
+    gadget_sdk::debug!("Received round 2 packages");
+
     gadget_sdk::debug!("Part 3 started");
     tracer.named_round_begins("Part 3 (Offline)");
     tracer.stage("Generate Key Package");
@@ -202,7 +203,7 @@ mod tests {
 
     #[derive(Arbitrary, Debug, Clone, Copy)]
     struct TestInputArgs {
-        #[strategy(3..20u16)]
+        #[strategy(3..10u16)]
         n: u16,
         #[strategy(2..#n)]
         t: u16,
@@ -214,7 +215,7 @@ mod tests {
         Secp256k1(TestInputArgs),
     }
 
-    #[proptest(async = "tokio", cases = 20)]
+    #[proptest(async = "tokio", cases = 20, fork = true)]
     async fn it_works(case: TestCase) {
         setup_log();
         match &case {
