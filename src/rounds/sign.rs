@@ -141,9 +141,7 @@ where
     tracing::debug!("Broadcasting round 1 package");
     tracer.send_msg();
     outgoings
-        .send(Outgoing::broadcast(Msg::Round1(
-            signing_commitments,
-        )))
+        .send(Outgoing::broadcast(Msg::Round1(signing_commitments)))
         .await
         .map_err(IoError::send_message)?;
     tracer.msg_sent();
