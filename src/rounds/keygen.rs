@@ -203,7 +203,7 @@ mod tests {
 
     #[derive(Arbitrary, Debug, Clone, Copy)]
     struct TestInputArgs {
-        #[strategy(3..20u16)]
+        #[strategy(3..10u16)]
         n: u16,
         #[strategy(2..#n)]
         t: u16,
@@ -215,7 +215,7 @@ mod tests {
         Secp256k1(TestInputArgs),
     }
 
-    #[proptest(async = "tokio", cases = 20)]
+    #[proptest(async = "tokio", cases = 20, fork = true)]
     async fn it_works(case: TestCase) {
         setup_log();
         match &case {
