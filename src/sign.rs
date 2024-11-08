@@ -1,20 +1,24 @@
+use std::collections::BTreeMap;
+
 use crate::rounds::delivery;
 use crate::rounds::sign as sign_protocol;
-use crate::rounds::IdentifierWrapper;
 use api::services::events::JobCalled;
+use color_eyre::eyre;
 use frost_core::keys::{KeyPackage, PublicKeyPackage};
 use frost_core::{Ciphersuite, Signature};
+use gadget_sdk::futures::TryFutureExt;
 use gadget_sdk::network::Network;
 use gadget_sdk::random::rand::seq::IteratorRandom;
 use gadget_sdk::random::SeedableRng;
+use gadget_sdk::subxt_core::ext::sp_core::ecdsa;
 use gadget_sdk::subxt_core::ext::sp_core::keccak_256;
+use gadget_sdk::subxt_core::ext::sp_core::Pair;
+use gadget_sdk::subxt_core::utils::AccountId32;
 use gadget_sdk::{self as sdk, random};
-use sdk::ctx::{GossipNetworkContext, ServicesContext, TangleClientContext};
 use sdk::event_listener::tangle::{
     jobs::{services_post_processor, services_pre_processor},
     TangleEventListener,
 };
-use sdk::tangle_subxt::subxt::tx::Signer;
 use sdk::tangle_subxt::tangle_testnet_runtime::api;
 
 use crate::FrostContext;
@@ -47,6 +51,8 @@ pub enum Error {
     ToUnsigned16(#[from] std::num::TryFromIntError),
     #[error(transparent)]
     Io(#[from] std::io::Error),
+    #[error(transparent)]
+    Other(color_eyre::eyre::Error),
 }
 
 impl<C: Ciphersuite> From<frost_core::Error<C>> for Error {
@@ -94,38 +100,61 @@ pub async fn sign(pubkey: Vec<u8>, msg: Vec<u8>, context: FrostContext) -> Resul
     let ciphersuite = info_json_value["ciphersuite"]
         .as_str()
         .ok_or(Error::KeyNotFound)?;
-    let client = context.tangle_client().await?;
-    let operators_with_restake = context.current_service_operators(&client).await?;
-    let my_key = context.config.first_sr25519_signer()?;
-    let n = operators_with_restake.len();
-    let i = operators_with_restake
-        .iter()
-        .map(|(op, _)| op)
-        .position(|op| op == &my_key.account_id())
-        .ok_or(Error::SelfNotInOperators)?;
+    let operators = context
+        .current_service_operators_ecdsa_keys()
+        .map_err(Error::Other)
+        .await?;
 
-    sdk::info!(%n, %i, %ciphersuite, "Signing");
-    let net = context.gossip_network().clone();
+    let my_ecdsa = context.config.first_ecdsa_signer()?;
+    let current_call_id = context.current_call_id().map_err(Error::Other).await?;
+    let net = context.keygen_network_backend(current_call_id);
     let rng = random::rand::rngs::OsRng;
-    let signature = match ciphersuite {
+    let res = match ciphersuite {
         frost_ed25519::Ed25519Sha512::ID => {
             let entry: crate::keygen::KeygenEntry<frost_ed25519::Ed25519Sha512> =
                 serde_json::from_value(info_json_value["entry"].clone())?;
-            signing_internal(rng, net, entry.keypkg, entry.pubkeypkg, msg)
-                .await?
-                .serialize()?
+            signing_internal(
+                rng,
+                net,
+                my_ecdsa.signer().public(),
+                operators,
+                entry.key_pkg,
+                entry.pub_key_pkg,
+                msg,
+            )
+            .map_ok(|s| s.serialize().ok())
+            .await
         }
         frost_secp256k1::Secp256K1Sha256::ID => {
             let entry: crate::keygen::KeygenEntry<frost_secp256k1::Secp256K1Sha256> =
                 serde_json::from_value(info_json_value["entry"].clone())?;
-            signing_internal(rng, net, entry.keypkg, entry.pubkeypkg, msg)
-                .await?
-                .serialize()?
+            signing_internal(
+                rng,
+                net,
+                my_ecdsa.signer().public(),
+                operators,
+                entry.key_pkg,
+                entry.pub_key_pkg,
+                msg,
+            )
+            .map_ok(|s| s.serialize().ok())
+            .await
         }
         _ => return Err(Error::UnknwonCiphersuite(ciphersuite.to_string())),
     };
 
-    Ok(signature)
+    match res {
+        Ok(Some(signature)) => Ok(signature),
+        Err(Error::SelfNotInSigners) => {
+            // This is a special case where the signer is not in the signers list.
+            // This is a valid case, as the signer is not required to be in the signers list.
+            Err(Error::Other(eyre::eyre!(
+                "Self not in signers list, this is a valid case"
+            )))
+        }
+        Ok(None) => Err(Error::Other(eyre::eyre!("Signature serialization failed"))),
+        Err(e) => Err(e),
+    }
 }
 
 /// A genaric signing protocol over a given ciphersuite.
@@ -133,6 +162,8 @@ pub async fn sign(pubkey: Vec<u8>, msg: Vec<u8>, context: FrostContext) -> Resul
 async fn signing_internal<C, R, N>(
     mut rng: R,
     net: N,
+    my_ecdsa_key: ecdsa::Public,
+    participants: BTreeMap<AccountId32, ecdsa::Public>,
     key_pkg: KeyPackage<C>,
     pub_key_pkg: PublicKeyPackage<C>,
     msg: Vec<u8>,
@@ -151,27 +182,38 @@ where
         key.extend_from_slice(&msg);
         keccak_256(&pub_key)
     };
-    let n = pub_key_pkg.verifying_shares().len() as u16;
-    let mut signers_rng = rand_chacha::ChaChaRng::from_seed(signers_seed);
-    let t = *key_pkg.min_signers();
-    let i = IdentifierWrapper(*key_pkg.identifier()).as_u16();
-    let signers = (0..n).choose_multiple(&mut signers_rng, usize::from(t));
 
-    if !signers.contains(&i) {
-        return Err(Error::SelfNotInOperators);
-    }
+    let t = *key_pkg.min_signers();
+
+    let mut signers_rng = rand_chacha::ChaChaRng::from_seed(signers_seed);
+    let signers = participants
+        .iter()
+        .enumerate()
+        .map(|(i, (_, v))| (i as u16, v.clone()))
+        .choose_multiple(&mut signers_rng, usize::from(t));
+
+    let selected_parties: BTreeMap<u16, _> = signers.into_iter().collect();
+    let signers_ids: Vec<_> = selected_parties.keys().copied().collect();
+
+    let i = selected_parties
+        .iter()
+        .position(|(_, v)| v == &my_ecdsa_key)
+        .ok_or(Error::SelfNotInSigners)?;
+
+    let i = u16::try_from(i)?;
     assert_eq!(
-        signers.len(),
+        signers_ids.len(),
         usize::from(*key_pkg.min_signers()),
         "Invalid number of signers"
     );
-    let delivery = delivery::NetworkDeliveryWrapper::new(net, i);
+
+    let delivery = delivery::NetworkDeliveryWrapper::new(net, i, selected_parties);
     let party = round_based::MpcParty::connected(delivery);
     let signature = sign_protocol::run::<R, C, _>(
         &mut rng,
         &key_pkg,
         &pub_key_pkg,
-        &signers,
+        &signers_ids,
         &msg,
         party,
         None,
@@ -179,7 +221,6 @@ where
     .await?;
 
     sdk::debug!(
-        %i,
         pubkey = %hex::encode(pub_key),
         signature = %hex::encode(signature.serialize()?),
         msg = %hex::encode(&msg),
@@ -188,8 +229,8 @@ where
     Ok(signature)
 }
 
-#[cfg(test)]
-mod tests {
+#[cfg(all(test, feature = "e2e"))]
+mod e2e {
     use api::runtime_types::bounded_collections::bounded_vec::BoundedVec;
     use api::runtime_types::tangle_primitives::services::field::BoundedString;
     use api::runtime_types::tangle_primitives::services::field::Field;
@@ -207,7 +248,7 @@ mod tests {
     #[allow(clippy::needless_return)]
     async fn signing() {
         setup_log();
-        let tangle = crate::test_utils::run_tangle().unwrap();
+        let tangle = tangle::run().unwrap();
         let base_path = std::env::current_dir().expect("Failed to get current directory");
         let base_path = base_path
             .canonicalize()
@@ -224,93 +265,113 @@ mod tests {
             signer_evm: None,
         };
 
-        const N: usize = 2;
+        const N: usize = 3;
         const T: usize = N / 2 + 1;
         const CIPHERSUITE: &str = frost_ed25519::Ed25519Sha512::ID;
 
-        new_test_ext_blueprint_manager::<N, 1, _, _, _>("", opts, run_test_blueprint_manager)
+        new_test_ext_blueprint_manager::<N, 1, _, _, _>(
+            "",
+            opts,
+            run_test_blueprint_manager,
+        )
+        .await
+        .execute_with_async(move |client, handles, svcs| async move {
+            // At this point, blueprint has been deployed, every node has registered
+            // as an operator for the relevant services, and, all gadgets are running
+
+            let keypair = handles[0].sr25519_id().clone();
+
+            let service = svcs.services.last().unwrap();
+            let service_id = service.id;
+            let call_id = get_next_call_id(client)
+                .await
+                .expect("Failed to get next job id");
+
+            info!("Submitting keygen job with params service ID: {service_id}, call ID: {call_id}");
+
+            // Pass the arguments
+            let ciphersuite = Field::String(BoundedString(BoundedVec(
+                CIPHERSUITE.to_string().into_bytes(),
+            )));
+            let threshold = Field::Uint16(T as u16);
+            let job_args = Args::from([ciphersuite, threshold]);
+
+            // Next step: submit a job under that service/job id
+            if let Err(err) = submit_job(
+                client,
+                &keypair,
+                service_id,
+                crate::keygen::KEYGEN_JOB_ID,
+                job_args,
+            )
             .await
-            .execute_with_async(move |client, handles, svcs| async move {
-                // At this point, blueprint has been deployed, every node has registered
-                // as an operator for the relevant services, and, all gadgets are running
+            {
+                error!("Failed to submit job: {err}");
+                panic!("Failed to submit job: {err}");
+            }
 
-                let keypair = handles[0].sr25519_id().clone();
+            let job_results = wait_for_completion_of_tangle_job(client, service_id, call_id, N)
+                .await
+                .expect("Failed to wait for job completion");
 
-                let service = svcs.services.last().unwrap();
-                let service_id = service.id;
-                let call_id = get_next_call_id(client)
-                    .await
-                    .expect("Failed to get next job id")
-                    .saturating_sub(1);
+            assert_eq!(job_results.service_id, service_id);
+            assert_eq!(job_results.call_id, call_id);
 
-                info!("Submitting keygen job with params service ID: {service_id}, call ID: {call_id}");
+            let pubkey = match job_results.result[0].clone() {
+                Field::Bytes(bytes) => bytes.0,
+                _ => panic!("Expected bytes"),
+            };
 
-                // Pass the arguments
-                let ciphersuite = Field::String(BoundedString(BoundedVec(CIPHERSUITE.to_string().into_bytes())));
-                let threshold = Field::Uint16(T as u16);
-                let job_args = Args::from([ciphersuite, threshold]);
+            let pubkey: VerifyingKey<frost_ed25519::Ed25519Sha512> =
+                VerifyingKey::deserialize(&pubkey).expect("Failed to deserialize pubkey");
+            let msg = Vec::from(b"Hello, FROST!");
 
-                // Next step: submit a job under that service/job id
-                if let Err(err) =
-                    submit_job(client, &keypair, service_id, crate::keygen::KEYGEN_JOB_ID, job_args).await
-                {
-                    error!("Failed to submit job: {err}");
-                    panic!("Failed to submit job: {err}");
-                }
+            let call_id = get_next_call_id(client)
+                .await
+                .expect("Failed to get next job id");
 
-                // Step 2: wait for the job to complete
-                let job_results =
-                    wait_for_completion_of_tangle_job(client, service_id, call_id, N)
-                        .await
-                        .expect("Failed to wait for job completion");
+            info!(
+                "Submitting signing job with params service ID: {service_id}, call ID: {call_id}"
+            );
 
-                assert_eq!(job_results.service_id, service_id);
-                assert_eq!(job_results.call_id, call_id);
-                let pubkey = match job_results.result[0].clone() {
-                    Field::Bytes(bytes) => bytes.0,
-                    _ => panic!("Expected bytes"),
-                };
-                let pubkey: VerifyingKey<frost_ed25519::Ed25519Sha512> = VerifyingKey::deserialize(&pubkey).expect("Failed to deserialize pubkey");
-                let msg = Vec::from(b"Hello, FROST!");
+            // Pass the arguments
+            let pubkey_arg = Field::Bytes(BoundedVec(pubkey.serialize().unwrap()));
+            let msg_arg = Field::Bytes(BoundedVec(msg.clone()));
+            let job_args = Args::from([pubkey_arg, msg_arg]);
 
-
-                let call_id = get_next_call_id(client)
-                    .await
-                    .expect("Failed to get next job id")
-                    .saturating_sub(1);
-
-                info!("Submitting signing job with params service ID: {service_id}, call ID: {call_id}");
-
-                // Pass the arguments
-                let pubkey_arg = Field::Bytes(BoundedVec(pubkey.serialize().unwrap()));
-                let msg_arg = Field::Bytes(BoundedVec(msg.clone()));
-                let job_args = Args::from([pubkey_arg, msg_arg]);
-
-                // Next step: submit a job under that service/job id
-                if let Err(err) =
-                    submit_job(client, &keypair, service_id, crate::sign::SIGN_JOB_ID, job_args).await
-                {
-                    error!("Failed to submit job: {err}");
-                    panic!("Failed to submit job: {err}");
-                }
-
-                // Step 2: wait for the job to complete
-                let job_results =
-                    wait_for_completion_of_tangle_job(client, service_id, call_id, T)
-                        .await
-                        .expect("Failed to wait for job completion");
-
-                assert_eq!(job_results.service_id, service_id);
-                assert_eq!(job_results.call_id, call_id);
-                let signature = match job_results.result[0].clone() {
-                    Field::Bytes(bytes) => bytes.0,
-                    _ => panic!("Expected bytes"),
-                };
-                // Verify the signature.
-                let signature: Signature<frost_ed25519::Ed25519Sha512> = Signature::deserialize(&signature).expect("Failed to deserialize signature");
-
-                pubkey.verify(&msg, &signature).expect("Failed to verify signature");
-            })
+            // Next step: submit a job under that service/job id
+            if let Err(err) = submit_job(
+                client,
+                &keypair,
+                service_id,
+                crate::sign::SIGN_JOB_ID,
+                job_args,
+            )
             .await
+            {
+                error!("Failed to submit job: {err}");
+                panic!("Failed to submit job: {err}");
+            }
+
+            // Step 2: wait for the job to complete
+            let job_results = wait_for_completion_of_tangle_job(client, service_id, call_id, T)
+                .await
+                .expect("Failed to wait for job completion");
+
+            assert_eq!(job_results.service_id, service_id);
+            assert_eq!(job_results.call_id, call_id);
+            let signature = match job_results.result[0].clone() {
+                Field::Bytes(bytes) => bytes.0,
+                _ => panic!("Expected bytes"),
+            };
+            // Verify the signature.
+            let signature: Signature<frost_ed25519::Ed25519Sha512> =
+                Signature::deserialize(&signature).expect("Failed to deserialize signature");
+
+            pubkey
+                .verify(&msg, &signature)
+                .expect("Failed to verify signature");
+        })
+        .await;
     }
 }

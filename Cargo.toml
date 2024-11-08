@@ -97,6 +97,9 @@ std = [
 kv-sled = ["sled"]
 kv-mem = []
 
+# Internal features for end-to-end tests
+e2e = []
+
 # The profile that 'dist' will build with
 [profile.dist]
 inherits = "release"

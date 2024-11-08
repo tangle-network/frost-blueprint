@@ -33,7 +33,7 @@ pub enum IoError {
     ReceiveMessage(#[cfg_attr(feature = "std", source)] BoxedError),
     /// got eof while recieving messages
     ReceiveMessageEof,
-    /// route received message (possibly malicious behavior): {0}
+    /// route received message (possibly malicious behavior): {0} ({0:?})
     RouteReceivedError(
         #[cfg_attr(feature = "std", source)]
         router_error::CompleteRoundError<simple_store::RoundInputError, Infallible>,

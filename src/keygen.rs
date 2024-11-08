@@ -1,14 +1,17 @@
+use std::collections::BTreeMap;
+
 use api::services::events::JobCalled;
 use frost_core::keys::{KeyPackage, PublicKeyPackage};
 use frost_core::{Ciphersuite, VerifyingKey};
+use gadget_sdk::futures::TryFutureExt;
 use gadget_sdk::network::Network;
+use gadget_sdk::subxt_core::ext::sp_core::{ecdsa, Pair};
+use gadget_sdk::subxt_core::utils::AccountId32;
 use gadget_sdk::{self as sdk, random};
-use sdk::ctx::{GossipNetworkContext, ServicesContext, TangleClientContext};
 use sdk::event_listener::tangle::{
     jobs::{services_post_processor, services_pre_processor},
     TangleEventListener,
 };
-use sdk::tangle_subxt::subxt::tx::Signer;
 use sdk::tangle_subxt::tangle_testnet_runtime::api;
 
 use crate::rounds::{delivery, keygen as keygen_protocol};
@@ -37,6 +40,8 @@ pub enum Error {
     ToUnsigned16(#[from] std::num::TryFromIntError),
     #[error(transparent)]
     Io(#[from] std::io::Error),
+    #[error(transparent)]
+    Other(color_eyre::eyre::Error),
 }
 
 impl<C: Ciphersuite> From<frost_core::Error<C>> for Error {
@@ -82,18 +87,14 @@ pub async fn keygen(
     threshold: u16,
     context: FrostContext,
 ) -> Result<Vec<u8>, Error> {
-    let client = context.tangle_client().await?;
-    let operators_with_restake = context.current_service_operators(&client).await?;
-    let my_key = context.config.first_sr25519_signer()?;
-    let n = operators_with_restake.len();
-    let i = operators_with_restake
-        .iter()
-        .map(|(op, _)| op)
-        .position(|op| op == &my_key.account_id())
-        .ok_or(Error::SelfNotInOperators)?;
+    let operators = context
+        .current_service_operators_ecdsa_keys()
+        .map_err(Error::Other)
+        .await?;
+    let my_ecdsa = context.config.first_ecdsa_signer()?;
 
-    sdk::info!(%n, %i, t = %threshold, %ciphersuite, "Keygen");
-    let net = context.gossip_network().clone();
+    let current_call_id = context.current_call_id().map_err(Error::Other).await?;
+    let net = context.keygen_network_backend(current_call_id);
     let rng = random::rand::rngs::OsRng;
     let kv = context.store();
     let key = match ciphersuite.as_str() {
@@ -101,9 +102,9 @@ pub async fn keygen(
             rng,
             net,
             kv,
+            my_ecdsa.signer().public(),
+            operators,
             threshold,
-            u16::try_from(n)?,
-            u16::try_from(i)?,
         )
         .await?
         .serialize()?,
@@ -112,9 +113,9 @@ pub async fn keygen(
                 rng,
                 net,
                 kv,
+                my_ecdsa.signer().public(),
+                operators,
                 threshold,
-                u16::try_from(n)?,
-                u16::try_from(i)?,
             )
             .await?
             .serialize()?
@@ -129,19 +130,19 @@ pub async fn keygen(
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
 #[serde(bound = "C: Ciphersuite")]
 pub struct KeygenEntry<C: Ciphersuite> {
-    pub keypkg: KeyPackage<C>,
-    pub pubkeypkg: PublicKeyPackage<C>,
+    pub key_pkg: KeyPackage<C>,
+    pub pub_key_pkg: PublicKeyPackage<C>,
 }
 
 /// A genaric keygen protocol over any ciphersuite.
-#[tracing::instrument(skip(rng, net, kv))]
+#[tracing::instrument(skip(rng, net, kv), fields(ciphersuite = %C::ID,  i = tracing::field::Empty, n = %participants.len()))]
 async fn keygen_internal<C, R, N>(
     mut rng: R,
     net: N,
     kv: crate::kv::SharedDynKVStore<String, Vec<u8>>,
+    me: ecdsa::Public,
+    participants: BTreeMap<AccountId32, ecdsa::Public>,
     t: u16,
-    n: u16,
-    i: u16,
 ) -> Result<VerifyingKey<C>, Error>
 where
     C: Ciphersuite + Send + Unpin,
@@ -151,22 +152,34 @@ where
     R: random::RngCore + random::CryptoRng,
     N: Network + Unpin,
 {
-    let delivery = delivery::NetworkDeliveryWrapper::new(net, i);
+    let n = participants.len();
+    let i = participants
+        .iter()
+        .map(|(_, k)| k)
+        .position(|k| k == &me)
+        .ok_or(Error::SelfNotInOperators)?;
+
+    let n = u16::try_from(n)?;
+    let i = u16::try_from(i)?;
+    tracing::span::Span::current().record("i", &i);
+
+    let parties: BTreeMap<u16, _> = participants
+        .into_iter()
+        .enumerate()
+        .map(|(j, (_, ecdsa))| (j as u16, ecdsa))
+        .collect();
+    let delivery = delivery::NetworkDeliveryWrapper::new(net, i, parties);
     let party = round_based::MpcParty::connected(delivery);
     let (key_package, public_key_package) =
         keygen_protocol::run::<R, C, _>(&mut rng, t, n, i, party, None).await?;
     let verifying_key = public_key_package.verifying_key().clone();
     let pubkey = hex::encode(verifying_key.serialize()?);
-    sdk::debug!(
-        %i,
-        %pubkey,
-        "Keygen Done"
-    );
+    sdk::debug!(%pubkey, "Keygen Done");
     let entry = serde_json::json!({
         "ciphersuite": C::ID,
         "entry": KeygenEntry {
-            keypkg: key_package,
-            pubkeypkg: public_key_package,
+            key_pkg: key_package,
+            pub_key_pkg: public_key_package,
         },
     });
     // Save the keygen entry.
@@ -174,8 +187,8 @@ where
     Ok(verifying_key)
 }
 
-#[cfg(test)]
-mod tests {
+#[cfg(all(test, feature = "e2e"))]
+mod e2e {
     use api::runtime_types::bounded_collections::bounded_vec::BoundedVec;
     use api::runtime_types::tangle_primitives::services::field::BoundedString;
     use api::runtime_types::tangle_primitives::services::field::Field;
@@ -190,10 +203,12 @@ mod tests {
 
     pub fn setup_testing_log() {
         use tracing_subscriber::util::SubscriberInitExt;
+        let env_filter = tracing_subscriber::EnvFilter::from_default_env();
         let _ = tracing_subscriber::fmt::SubscriberBuilder::default()
             .without_time()
+            .with_target(true)
             .with_span_events(tracing_subscriber::fmt::format::FmtSpan::NONE)
-            .with_env_filter(tracing_subscriber::EnvFilter::from_default_env())
+            .with_env_filter(env_filter)
             .with_test_writer()
             .finish()
             .try_init();
@@ -203,7 +218,7 @@ mod tests {
     #[allow(clippy::needless_return)]
     async fn keygen() {
         setup_testing_log();
-        let tangle = crate::test_utils::run_tangle().unwrap();
+        let tangle = tangle::run().unwrap();
         let base_path = std::env::current_dir().expect("Failed to get current directory");
         let base_path = base_path
             .canonicalize()
@@ -249,13 +264,6 @@ mod tests {
                 let threshold = Field::Uint16(T as u16);
                 let job_args = Args::from([ciphersuite, threshold]);
 
-                // Wait till we reach block 20 to ensure all nodes have the same view
-                let mut blocks = client.blocks().subscribe_finalized().await.unwrap();
-                while let Some(Ok(block)) = blocks.next().await {
-                    if block.number() >= 20 {
-                        break;
-                    }
-                }
                 // Next step: submit a job under that service/job id
                 if let Err(err) =
                     submit_job(client, &keypair, service_id, KEYGEN_JOB_ID, job_args).await
@@ -265,7 +273,7 @@ mod tests {
                 }
 
                 // Step 2: wait for the job to complete
-                let job_results = wait_for_completion_of_tangle_job(client, service_id, call_id, N)
+                let job_results = wait_for_completion_of_tangle_job(client, service_id, call_id, T)
                     .await
                     .expect("Failed to wait for job completion");
 
@@ -274,6 +282,6 @@ mod tests {
                 assert_eq!(job_results.call_id, call_id);
                 assert!(matches!(job_results.result[0], Field::Bytes(_)));
             })
-            .await
+            .await;
     }
 }

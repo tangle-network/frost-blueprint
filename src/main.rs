@@ -8,7 +8,7 @@ use gadget_sdk::{
 use tracing::Instrument;
 
 #[sdk::main(env)]
-#[tracing::instrument(skip(env), name = "frost-blueprint", parent = env.span.clone(), err)]
+#[tracing::instrument(skip(env), name = "frost_blueprint", err)]
 async fn main() -> Result<()> {
     color_eyre::install()?;
 
