@@ -169,7 +169,14 @@ jobs:
           # https://docs.github.com/en/actions/configuring-and-managing-workflows/creating-and-storing-encrypted-secrets
           # eg: token: ${{ secrets.MY_TOKEN }}
           token: ${{ secrets.GITHUB_TOKEN }}
-      - name: Rename Tangle Node
-        run: mv tangle/target/release/tangle-testnet-manual-seal-linux-amd64 tangle/target/release/tangle
+      - name: Setup Tangle Node
+        run: |
+          mv tangle-testnet-manual-seal-linux-amd64 $HOME/.local/bin/tangle
+          chmod +x $HOME/.local/bin/tangle
+          # Add the Tangle node to the PATH
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+          # Check the Tangle node version
+          tangle --version
+
       - name: Run E2E tests
         run: cargo nextest run e2e --features e2e --nocapture
