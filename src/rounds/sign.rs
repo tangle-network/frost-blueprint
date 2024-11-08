@@ -142,7 +142,7 @@ where
     tracer.send_msg();
     outgoings
         .send(Outgoing::broadcast(Msg::Round1(
-            signing_commitments.clone(),
+            signing_commitments,
         )))
         .await
         .map_err(IoError::send_message)?;
@@ -178,12 +178,12 @@ where
     let signing_pkg = SigningPackage::new(all_signing_commitments, msg);
 
     let signature_share =
-        sign::<C>(&signing_pkg, &signing_nonces, &key_pkg).map_err(SigningAborted::Frost)?;
+        sign::<C>(&signing_pkg, &signing_nonces, key_pkg).map_err(SigningAborted::Frost)?;
     tracing::debug!("Broadcasting round 2 package");
     tracer.stage("Broadcast signature share");
     tracer.send_msg();
     outgoings
-        .send(Outgoing::broadcast(Msg::Round2(signature_share.clone())))
+        .send(Outgoing::broadcast(Msg::Round2(signature_share)))
         .await
         .map_err(IoError::send_message)?;
     tracer.msg_sent();
@@ -221,7 +221,7 @@ where
             .get(from)
             .ok_or(Bug::VerifyingShareNotFound)?;
         let result = verify_signature_share(
-            from.clone(),
+            *from,
             verifying_share,
             share,
             &signing_pkg,
@@ -237,7 +237,7 @@ where
         return Err(SigningAborted::InvalidSignatureShare { blames }.into());
     }
     tracer.stage("Aggregate signature shares");
-    let signature = aggregate::<C>(&signing_pkg, &all_signature_shares, &pub_key_pkg)
+    let signature = aggregate::<C>(&signing_pkg, &all_signature_shares, pub_key_pkg)
         .map_err(SigningAborted::Frost)?;
     // Done
     tracer.protocol_ends();
