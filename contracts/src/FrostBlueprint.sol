@@ -15,10 +15,12 @@ contract FrostBlueprint is BlueprintServiceManagerBase {
      * @param operator The operator's details.
      * @param _registrationInputs Inputs required for registration.
      */
-    function onRegister(
-        bytes calldata operator,
-        bytes calldata _registrationInputs
-    ) public payable override onlyFromRootChain {
+    function onRegister(bytes calldata operator, bytes calldata _registrationInputs)
+        public
+        payable
+        override
+        onlyFromRootChain
+    {
         // Do something with the operator's details
     }
 
@@ -29,11 +31,12 @@ contract FrostBlueprint is BlueprintServiceManagerBase {
      * @param operators The operators involved in the service.
      * @param _requestInputs Inputs required for the service request.
      */
-    function onRequest(
-        uint64 serviceId,
-        bytes[] calldata operators,
-        bytes calldata _requestInputs
-    ) public payable override onlyFromRootChain {
+    function onRequest(uint64 serviceId, bytes[] calldata operators, bytes calldata _requestInputs)
+        public
+        payable
+        override
+        onlyFromRootChain
+    {
         // Do something with the service request
     }
 
@@ -63,9 +66,7 @@ contract FrostBlueprint is BlueprintServiceManagerBase {
      * @param publicKey The public key to convert.
      * @return operator address The operator address.
      */
-    function operatorAddressFromPublicKey(
-        bytes calldata publicKey
-    ) internal pure returns (address operator) {
+    function operatorAddressFromPublicKey(bytes calldata publicKey) internal pure returns (address operator) {
         return address(uint160(uint256(keccak256(publicKey))));
     }
 }
