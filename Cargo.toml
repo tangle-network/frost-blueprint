@@ -34,7 +34,7 @@ manager = { Evm = "FrostBlueprint" }
 
 [dependencies]
 tracing = "0.1"
-thiserror = "1.0"
+thiserror = "2.0"
 displaydoc = "0.2.5"
 async-trait = "0.1"
 color-eyre = "0.6"
