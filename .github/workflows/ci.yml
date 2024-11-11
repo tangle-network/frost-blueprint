@@ -2,9 +2,9 @@ name: CI
 
 on:
   pull_request:
-    branches: [ main ]
+    branches: [main]
   push:
-    branches: [ main ]
+    branches: [main]
   workflow_dispatch:
 
 concurrency:
@@ -30,7 +30,6 @@ jobs:
           toolchain: nightly-2024-10-13
           components: rustfmt
 
-
       - name: Check Formatting
         run: cargo fmt -- --check
 
@@ -49,6 +48,9 @@ jobs:
 
       - name: Verify Forge installation
         run: forge --version
+
+      - name: Install Solidity Dependencies
+        run: forge soldeer update -d
 
       - uses: dtolnay/rust-toolchain@nightly
         with:
@@ -80,6 +82,9 @@ jobs:
 
       - name: Verify Forge installation
         run: forge --version
+
+      - name: Install Solidity Dependencies
+        run: forge soldeer update -d
 
       - uses: dtolnay/rust-toolchain@nightly
         with:
@@ -116,6 +121,9 @@ jobs:
       - name: Verify Forge installation
         run: forge --version
 
+      - name: Install Solidity Dependencies
+        run: forge soldeer update -d
+
       - uses: dtolnay/rust-toolchain@nightly
         with:
           toolchain: nightly-2024-10-13
@@ -135,7 +143,7 @@ jobs:
       - name: Download Tangle Node
         uses: robinraju/release-downloader@v1
         with:
-          repository: 'tangle-network/tangle'
+          repository: "tangle-network/tangle"
           # A flag to set the download target as latest release
           # The default value is 'false'
           latest: false
@@ -149,7 +157,7 @@ jobs:
           # The name of the file to download.
           # Use this field only to specify filenames other than tarball or zipball, if any.
           # Supports wildcard pattern (eg: '*', '*.deb', '*.zip' etc..)
-          fileName: 'tangle-testnet-manual-seal-linux-amd64'
+          fileName: "tangle-testnet-manual-seal-linux-amd64"
 
           # Download the attached tarball (*.tar.gz)
           tarBall: false

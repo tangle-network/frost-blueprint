@@ -33,6 +33,9 @@ jobs:
         with:
           version: nightly
 
+      - name: Install Solidity Dependencies
+        run: forge soldeer update -d
+
       - name: Run Forge build
         run: |
           forge --version

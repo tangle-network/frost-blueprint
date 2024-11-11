@@ -5,3 +5,6 @@
 
 - name: Verify Forge installation
   run: forge --version
+
+- name: Install Solidity Dependencies
+  run: forge soldeer update -d
