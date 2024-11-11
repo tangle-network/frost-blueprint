@@ -59,6 +59,12 @@
           # Environment variables
           RUST_SRC_PATH = "${toolchain}/lib/rustlib/src/rust/library";
           LD_LIBRARY_PATH = lib.makeLibraryPath [ pkgs.gmp pkgs.libclang pkgs.openssl.dev pkgs.stdenv.cc.cc ];
+          # Add Forge from foundry to $HOME/.config/.foundry/bin/forge
+          # by symlinking it to the flake's bin
+          shellHook = ''
+            mkdir -p $HOME/.config/.foundry/bin
+            ln -s ${pkgs.foundry-bin}/bin/forge $HOME/.config/.foundry/bin/forge
+          '';
         };
       });
 }
