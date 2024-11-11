@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
 
 concurrency:
-  group: rust-validation-${{ github.head_ref }}
+  group: forge-validation-${{ github.head_ref }}
   cancel-in-progress: true
 
 env:
