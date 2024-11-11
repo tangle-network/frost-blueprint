@@ -5,7 +5,12 @@ out = "contracts/out"
 script = "contracts/script"
 cache_path = "contracts/cache"
 broadcast = "contracts/broadcast"
-libs = ["contracts/lib"]
+libs = ["dependencies"]
 auto_detect_remappings = true
+
+[dependencies]
+forge-std = "1.9.4"
+"@openzeppelin-contracts" = "5.1.0"
+tnt-core = { version = "0.1.0", git = "https://github.com/tangle-network/tnt-core.git", rev = "b51a732e80e9f8fb9245b4e58968f2bd54a37b66" }
 
 # See more config options https://github.com/foundry-rs/foundry/blob/master/crates/config/README.md#all-options

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSE
 pragma solidity >=0.8.13;
 
-import "tnt-core/src/BlueprintServiceManagerBase.sol";
+import "tnt-core/BlueprintServiceManagerBase.sol";
 
 /**
  * @title FrostBlueprint

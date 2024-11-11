@@ -30,3 +30,7 @@ docs/
 blueprint.json
 blueprint.lock
 keystores/
+
+
+# Soldeer
+/dependencies

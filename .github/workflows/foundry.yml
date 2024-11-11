@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
 
 concurrency:
-  group: rust-validation-${{ github.head_ref }}
+  group: forge-validation-${{ github.head_ref }}
   cancel-in-progress: true
 
 env:
@@ -32,6 +32,9 @@ jobs:
         uses: foundry-rs/foundry-toolchain@v1
         with:
           version: nightly
+
+      - name: Install Solidity Dependencies
+        run: forge soldeer update -d
 
       - name: Run Forge build
         run: |
