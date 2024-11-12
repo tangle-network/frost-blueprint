@@ -64,6 +64,8 @@ jobs:
       - name: Forge build
         run: forge update && forge build
 
+      - uses: taiki-e/github-actions/free-device-space@main
+
       - name: Run Clippy
         run: cargo clippy --tests --examples -- -D warnings
 
@@ -101,6 +103,8 @@ jobs:
 
       - name: Forge build
         run: forge update && forge build
+
+      - uses: taiki-e/github-actions/free-device-space@main
 
       - name: tests
         run: cargo nextest run
@@ -184,6 +188,8 @@ jobs:
           echo "$HOME/.local/bin" >> $GITHUB_PATH
           # Check the Tangle node version
           tangle --version
+
+      - uses: taiki-e/github-actions/free-device-space@main
 
       - name: Build Blueprint
         run: cargo build --features e2e
