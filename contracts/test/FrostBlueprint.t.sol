@@ -211,10 +211,9 @@ contract FrostBlueprintTest is Test {
         // Prepare inputs and outputs for keygen job
         uint16 threshold = 1;
         bytes memory inputs = abi.encodePacked(threshold);
-        bytes memory validPublicKey = new bytes(33); // Valid ECDSA public key length
-        validPublicKey[0] = 0x02; // Compressed public key prefix
+        bytes memory validPublicKey = new bytes(32); // Valid ECDSA public key length
         // Fill the rest with dummy data
-        for (uint256 i = 1; i < 33; i++) {
+        for (uint256 i = 1; i < 32; i++) {
             validPublicKey[i] = bytes1(uint8(i));
         }
         bytes memory outputs = abi.encodePacked(validPublicKey);
@@ -305,40 +304,13 @@ contract FrostBlueprintTest is Test {
         vm.prank(rootChain);
         frostBlueprint.onRequest(serviceId, operators, "");
 
-        // Prepare invalid outputs for keygen job (length != 33)
-        bytes memory outputs = new bytes(32); // Invalid length
+        // Prepare invalid outputs for keygen job (length != 32)
+        bytes memory outputs = new bytes(33); // Invalid length
 
         // Simulate rootChain calling onJobResult
         vm.prank(rootChain);
         vm.expectRevert(abi.encodeWithSelector(FrostBlueprint.InvalidECDSAPublicKey.selector));
         frostBlueprint.onJobResult(serviceId, KEYGEN_JOB_ID, 1, operatorPublicKey, "", outputs);
-    }
-
-    // Test handling invalid ECDSA signature
-    function testHandleInvalidECDSASignature() public {
-        // Register operator1
-        vm.prank(rootChain);
-        frostBlueprint.onRegister(operator1PublicKey, "");
-
-        uint64 serviceId = 1;
-
-        // Add operator1 to serviceId
-        bytes[] memory operators = new bytes[](1);
-        operators[0] = operator1PublicKey;
-        vm.prank(rootChain);
-        frostBlueprint.onRequest(serviceId, operators, "");
-
-        // Prepare inputs and outputs for sign job with invalid signature length
-        bytes memory publicKey = operator2PublicKey;
-        bytes memory message = "Test Message";
-        bytes memory inputs = abi.encode(publicKey, message);
-        bytes memory invalidSignature = new bytes(64); // Invalid length
-        bytes memory outputs = invalidSignature;
-
-        // Simulate rootChain calling onJobResult
-        vm.prank(rootChain);
-        vm.expectRevert(abi.encodeWithSelector(FrostBlueprint.InvalidECDSASignature.selector));
-        frostBlueprint.onJobResult(serviceId, SIGN_JOB_ID, 1, operator1PublicKey, inputs, outputs);
     }
 
     // Test calculateServiceCost

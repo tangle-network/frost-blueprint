@@ -39,6 +39,9 @@ contract FrostBlueprint is BlueprintServiceManagerBase, PaymentManagerBase {
     /// @dev Mapping of service IDs to service operators addresses
     mapping(uint64 => EnumerableSet.AddressSet) private _serviceOperators;
 
+    /// @dev Mapping of service id to the service supported assets.
+    /// TODO: This could be moved to the service manager contract.
+
     /// @dev Mapping from job id to the amount of tokens required for the job.
     /// This is used to determine the amount of tokens to be transferred from the
     /// service owner balance to the operator balance.
@@ -54,7 +57,6 @@ contract FrostBlueprint is BlueprintServiceManagerBase, PaymentManagerBase {
     error OperatorAlreadyAdded(uint64 serviceId, address operator);
     error UnsupportedJob(uint8 job);
     error InvalidECDSAPublicKey();
-    error InvalidECDSASignature();
 
     /**
      * @dev Constructor for the FrostBlueprint contract
@@ -225,7 +227,8 @@ contract FrostBlueprint is BlueprintServiceManagerBase, PaymentManagerBase {
         bytes calldata _inputs,
         bytes calldata outputs
     ) internal {
-        if (outputs.length != 33) {
+        bytes32 pubkey = abi.decode(outputs, (bytes32));
+        if (outputs.length != 32) {
             revert InvalidECDSAPublicKey();
         }
         uint256 operatorsCount = _serviceOperators[serviceId].length();
@@ -253,11 +256,6 @@ contract FrostBlueprint is BlueprintServiceManagerBase, PaymentManagerBase {
         bytes calldata inputs,
         bytes calldata outputs
     ) internal {
-        (bytes memory _publicKey, bytes memory _msg) = abi.decode(inputs, (bytes, bytes));
-        bytes memory signature = abi.decode(outputs, (bytes));
-        if (signature.length != 65) {
-            revert InvalidECDSASignature();
-        }
         // TODO: verify the signature
         address[] memory _tokens = supportedTokens();
         for (uint256 i = 0; i < _tokens.length; i++) {
