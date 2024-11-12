@@ -4,8 +4,8 @@ pragma solidity >=0.8.13;
 import "tnt-core/BlueprintServiceManagerBase.sol";
 import "@openzeppelin/contracts/utils/structs/EnumerableMap.sol";
 
-import "@src/payments/IPaymentManager.sol";
-import "@src/payments/PaymentManagerBase.sol";
+import "./payments/IPaymentManager.sol";
+import "./payments/PaymentManagerBase.sol";
 
 /**
  * @title FrostBlueprint
@@ -22,17 +22,17 @@ contract FrostBlueprint is BlueprintServiceManagerBase, PaymentManagerBase {
     /// @dev The IERC20 contract's address of TNT.
     ///
     /// TODO: move this into the TNT core contracts.
-    address constant TNT_ERC20_ADDRESS = 0x0000000000000000000000000000000000000802;
+    address public constant TNT_ERC20_ADDRESS = 0x0000000000000000000000000000000000000802;
 
     /// @dev The Job Id for `keygen` job.
-    uint8 constant KEYGEN_JOB_ID = 0;
+    uint8 public constant KEYGEN_JOB_ID = 0;
     /// @dev The Job Id for `sign` job.
-    uint8 constant SIGN_JOB_ID = 1;
+    uint8 public constant SIGN_JOB_ID = 1;
 
     /// @dev Keygen Job Avarage duration in seconds.
-    uint256 constant KEYGEN_JOB_DURATION_SECS = 5 seconds;
+    uint256 public constant KEYGEN_JOB_DURATION_SECS = 5 seconds;
     /// @dev Sign Job Avarage duration in seconds.
-    uint256 constant SIGN_JOB_DURATION_SECS = 3 seconds;
+    uint256 public constant SIGN_JOB_DURATION_SECS = 3 seconds;
 
     // ================ STORAGE =======================
 
@@ -53,8 +53,8 @@ contract FrostBlueprint is BlueprintServiceManagerBase, PaymentManagerBase {
     error OperatorNotRegistered(address operator);
     error OperatorAlreadyAdded(uint64 serviceId, address operator);
     error UnsupportedJob(uint8 job);
-    error InvalidECDSAPublicKey(bytes publicKey);
-    error InvalidECDSASignature(bytes signature);
+    error InvalidECDSAPublicKey();
+    error InvalidECDSASignature();
 
     /**
      * @dev Constructor for the FrostBlueprint contract
@@ -226,7 +226,7 @@ contract FrostBlueprint is BlueprintServiceManagerBase, PaymentManagerBase {
         bytes calldata outputs
     ) internal {
         if (outputs.length != 33) {
-            revert InvalidECDSAPublicKey(outputs);
+            revert InvalidECDSAPublicKey();
         }
         uint256 operatorsCount = _serviceOperators[serviceId].length();
         address[] memory _tokens = supportedTokens();
@@ -256,7 +256,7 @@ contract FrostBlueprint is BlueprintServiceManagerBase, PaymentManagerBase {
         (bytes memory _publicKey, bytes memory _msg) = abi.decode(inputs, (bytes, bytes));
         bytes memory signature = abi.decode(outputs, (bytes));
         if (signature.length != 65) {
-            revert InvalidECDSASignature(signature);
+            revert InvalidECDSASignature();
         }
         // TODO: verify the signature
         address[] memory _tokens = supportedTokens();

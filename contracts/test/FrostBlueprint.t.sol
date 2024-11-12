@@ -5,7 +5,7 @@ import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {Test} from "forge-std/Test.sol";
 import {console2} from "forge-std/console2.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "@src/FrostBlueprint.sol";
+import "../src/FrostBlueprint.sol";
 
 contract ERC20Mock is ERC20, Ownable {
     constructor(string memory name, string memory symbol, uint8 decimals, address owner, uint256 initialSupply)
@@ -131,12 +131,10 @@ contract FrostBlueprintTest is Test {
 
     // Test operator registration by non-rootChain should fail
     function testOperatorRegistrationUnauthorized() public {
-        bytes memory operatorPublicKey = abi.encodePacked(operator1);
-
         // Attempt to register operator1 from non-rootChain address
         vm.prank(nonAuthorized);
-        vm.expectRevert("Unauthorized");
-        frostBlueprint.onRegister(operatorPublicKey, "");
+        vm.expectRevert("RootChain: Only root chain can call this function");
+        frostBlueprint.onRegister(operator1PublicKey, "");
     }
 
     // Test adding service operators
@@ -187,7 +185,7 @@ contract FrostBlueprintTest is Test {
         uint64 serviceId = 1;
 
         bytes[] memory operators = new bytes[](1);
-        bytes memory unregisteredOperatorPK = abi.encodePacked(operator2);
+        bytes memory unregisteredOperatorPK = abi.encodePacked(operator2PublicKey);
         operators[0] = unregisteredOperatorPK;
 
         // Attempt to add unregistered operator2 to serviceId
@@ -199,43 +197,41 @@ contract FrostBlueprintTest is Test {
     // Test handling keygen job result
     function testHandleKeygenJobResult() public {
         // Register operator1
-        bytes memory operatorPublicKey = abi.encodePacked(operator1);
         vm.prank(rootChain);
-        frostBlueprint.onRegister(operatorPublicKey, "");
+        frostBlueprint.onRegister(operator1PublicKey, "");
 
         uint64 serviceId = 1;
 
         // Add operator1 to serviceId
         bytes[] memory operators = new bytes[](1);
-        operators[0] = operatorPublicKey;
+        operators[0] = operator1PublicKey;
         vm.prank(rootChain);
         frostBlueprint.onRequest(serviceId, operators, "");
 
         // Prepare inputs and outputs for keygen job
-        bytes memory inputs = ""; // Assuming no inputs needed
+        uint16 threshold = 1;
+        bytes memory inputs = abi.encodePacked(threshold);
         bytes memory validPublicKey = new bytes(33); // Valid ECDSA public key length
-        validPublicKey[0] = 0x04; // Uncompressed key prefix
+        validPublicKey[0] = 0x02; // Compressed public key prefix
         // Fill the rest with dummy data
         for (uint256 i = 1; i < 33; i++) {
             validPublicKey[i] = bytes1(uint8(i));
         }
-        bytes memory outputs = validPublicKey;
+        bytes memory outputs = abi.encodePacked(validPublicKey);
 
-        // Mock the supportedTokens to include mockERC20
-        // Since the constructor adds TNT_ERC20_ADDRESS, ensure it's the mockERC20 address
-        // For simplicity, assume mockERC20 is at TNT_ERC20_ADDRESS
-
-        // Assign mockERC20 balance to FrostBlueprint
         // Transfer tokens from owner to FrostBlueprint
         vm.prank(owner);
         mockERC20.transfer(address(frostBlueprint), 1e18); // 1 token
 
         // Simulate rootChain calling onJobResult
         vm.prank(rootChain);
-        frostBlueprint.onJobResult(serviceId, KEYGEN_JOB_ID, 1, operatorPublicKey, inputs, outputs);
+        frostBlueprint.onJobResult(serviceId, KEYGEN_JOB_ID, 1, operator1PublicKey, inputs, outputs);
 
         // Verify that operator1 has been credited
-        uint256 expectedAmount = 1e15 * 5 * 1; // tokensPerSec * duration * operatorsCount
+        uint256 keygenJobCost = frostBlueprint.jobCost(KEYGEN_JOB_ID, TNT_ERC20_ADDRESS);
+        uint256 avgDuration = frostBlueprint.KEYGEN_JOB_DURATION_SECS();
+        uint256 operatorsCount = 1;
+        uint256 expectedAmount = keygenJobCost * avgDuration * operatorsCount;
         uint256 actualBalance = frostBlueprint.operatorBalanceOf(operator1, TNT_ERC20_ADDRESS);
         assertEq(actualBalance, expectedAmount, "Operator1 should be credited correctly");
     }
@@ -243,20 +239,19 @@ contract FrostBlueprintTest is Test {
     // Test handling sign job result
     function testHandleSignJobResult() public {
         // Register operator1
-        bytes memory operatorPublicKey = abi.encodePacked(operator1);
         vm.prank(rootChain);
-        frostBlueprint.onRegister(operatorPublicKey, "");
+        frostBlueprint.onRegister(operator1PublicKey, "");
 
         uint64 serviceId = 1;
 
         // Add operator1 to serviceId
         bytes[] memory operators = new bytes[](1);
-        operators[0] = operatorPublicKey;
+        operators[0] = operator1PublicKey;
         vm.prank(rootChain);
         frostBlueprint.onRequest(serviceId, operators, "");
 
         // Prepare inputs and outputs for sign job
-        bytes memory publicKey = abi.encodePacked(operator1);
+        bytes memory publicKey = operator2PublicKey;
         bytes memory message = "Test Message";
         bytes memory inputs = abi.encode(publicKey, message);
         bytes memory signature = new bytes(65); // Valid ECDSA signature length
@@ -264,7 +259,7 @@ contract FrostBlueprintTest is Test {
         for (uint256 i = 0; i < 65; i++) {
             signature[i] = bytes1(uint8(i));
         }
-        bytes memory outputs = signature;
+        bytes memory outputs = abi.encode(signature);
 
         // Assign mockERC20 balance to FrostBlueprint
         vm.prank(owner);
@@ -272,10 +267,12 @@ contract FrostBlueprintTest is Test {
 
         // Simulate rootChain calling onJobResult
         vm.prank(rootChain);
-        frostBlueprint.onJobResult(serviceId, SIGN_JOB_ID, 1, operatorPublicKey, inputs, outputs);
+        frostBlueprint.onJobResult(serviceId, SIGN_JOB_ID, 1, operator1PublicKey, inputs, outputs);
 
         // Verify that operator1 has been credited
-        uint256 expectedAmount = 1e13 * 3; // tokensPerSec * duration
+        uint256 signJobCost = frostBlueprint.jobCost(SIGN_JOB_ID, TNT_ERC20_ADDRESS);
+        uint256 avgDuration = frostBlueprint.SIGN_JOB_DURATION_SECS();
+        uint256 expectedAmount = signJobCost * avgDuration;
         uint256 actualBalance = frostBlueprint.operatorBalanceOf(operator1, TNT_ERC20_ADDRESS);
         assertEq(actualBalance, expectedAmount, "Operator1 should be credited correctly for sign job");
     }
@@ -313,27 +310,26 @@ contract FrostBlueprintTest is Test {
 
         // Simulate rootChain calling onJobResult
         vm.prank(rootChain);
-        vm.expectRevert(abi.encodeWithSelector(FrostBlueprint.InvalidECDSAPublicKey.selector, outputs));
+        vm.expectRevert(abi.encodeWithSelector(FrostBlueprint.InvalidECDSAPublicKey.selector));
         frostBlueprint.onJobResult(serviceId, KEYGEN_JOB_ID, 1, operatorPublicKey, "", outputs);
     }
 
     // Test handling invalid ECDSA signature
     function testHandleInvalidECDSASignature() public {
         // Register operator1
-        bytes memory operatorPublicKey = abi.encodePacked(operator1);
         vm.prank(rootChain);
-        frostBlueprint.onRegister(operatorPublicKey, "");
+        frostBlueprint.onRegister(operator1PublicKey, "");
 
         uint64 serviceId = 1;
 
         // Add operator1 to serviceId
         bytes[] memory operators = new bytes[](1);
-        operators[0] = operatorPublicKey;
+        operators[0] = operator1PublicKey;
         vm.prank(rootChain);
         frostBlueprint.onRequest(serviceId, operators, "");
 
         // Prepare inputs and outputs for sign job with invalid signature length
-        bytes memory publicKey = abi.encodePacked(operator1);
+        bytes memory publicKey = operator2PublicKey;
         bytes memory message = "Test Message";
         bytes memory inputs = abi.encode(publicKey, message);
         bytes memory invalidSignature = new bytes(64); // Invalid length
@@ -341,8 +337,8 @@ contract FrostBlueprintTest is Test {
 
         // Simulate rootChain calling onJobResult
         vm.prank(rootChain);
-        vm.expectRevert(abi.encodeWithSelector(FrostBlueprint.InvalidECDSASignature.selector, invalidSignature));
-        frostBlueprint.onJobResult(serviceId, SIGN_JOB_ID, 1, operatorPublicKey, inputs, outputs);
+        vm.expectRevert(abi.encodeWithSelector(FrostBlueprint.InvalidECDSASignature.selector));
+        frostBlueprint.onJobResult(serviceId, SIGN_JOB_ID, 1, operator1PublicKey, inputs, outputs);
     }
 
     // Test calculateServiceCost
@@ -468,6 +464,10 @@ contract FrostBlueprintTest is Test {
         vm.prank(owner);
         frostBlueprint.addSupportedTokens(tokensToAdd);
 
+        // Transfer tokens to service owner
+        vm.prank(owner);
+        newMockToken.transfer(serviceOwner, depositAmount);
+
         // Approve FrostBlueprint to spend tokens
         vm.prank(serviceOwner);
         newMockToken.approve(address(frostBlueprint), depositAmount);
@@ -475,8 +475,6 @@ contract FrostBlueprintTest is Test {
         // Simulate serviceOwner depositing tokens
         vm.prank(serviceOwner);
         frostBlueprint.deposit(address(newMockToken), depositAmount);
-
-        // Verify Deposit event (optional)
 
         // Verify the contract's balance
         uint256 contractBalance = newMockToken.balanceOf(address(frostBlueprint));
@@ -503,7 +501,7 @@ contract FrostBlueprintTest is Test {
 
         // Attempt to deposit with amount 0
         vm.prank(serviceOwner);
-        vm.expectRevert("InvalidAmount()");
+        vm.expectRevert(abi.encodeWithSelector(PaymentManagerBase.InvalidAmount.selector));
         frostBlueprint.deposit(address(0), depositAmount);
     }
 
@@ -589,9 +587,8 @@ contract FrostBlueprintTest is Test {
         uint256 withdrawAmount = 1e18; // 1 token
 
         // Register operator1
-        bytes memory operatorPublicKey = abi.encodePacked(operator1);
         vm.prank(rootChain);
-        frostBlueprint.onRegister(operatorPublicKey, "");
+        frostBlueprint.onRegister(operator1PublicKey, "");
 
         // Attempt to withdraw without crediting
         vm.prank(operator1);
@@ -605,9 +602,15 @@ contract FrostBlueprintTest is Test {
         uint256 withdrawAmount = 5e14; // 0.0005 ether
 
         // Register operator1 and credit
-        bytes memory operatorPublicKey = abi.encodePacked(operator1);
         vm.prank(rootChain);
-        frostBlueprint.onRegister(operatorPublicKey, "");
+        frostBlueprint.onRegister(operator1PublicKey, "");
+
+        // Transfer some tokens from owner to blueprint manager by depositing
+        vm.prank(owner);
+        // Approve FrostBlueprint to spend tokens
+        mockERC20.approve(address(frostBlueprint), depositAmount);
+        vm.prank(owner);
+        frostBlueprint.deposit(TNT_ERC20_ADDRESS, depositAmount);
 
         vm.prank(rootChain);
         frostBlueprint.creditOperator(operator1, TNT_ERC20_ADDRESS, withdrawAmount);
@@ -633,9 +636,12 @@ contract FrostBlueprintTest is Test {
         uint256 withdrawAmount = 1e18; // 1 token
 
         // Register operator1 and credit
-        bytes memory operatorPublicKey = abi.encodePacked(operator1);
         vm.prank(rootChain);
-        frostBlueprint.onRegister(operatorPublicKey, "");
+        frostBlueprint.onRegister(operator1PublicKey, "");
+
+        // Deposit some tokens to the contract
+        vm.prank(owner);
+        mockERC20.transfer(address(frostBlueprint), withdrawAmount);
 
         vm.prank(rootChain);
         frostBlueprint.creditOperator(operator1, TNT_ERC20_ADDRESS, withdrawAmount);
@@ -651,6 +657,13 @@ contract FrostBlueprintTest is Test {
         uint256 depositAmount = 1 ether;
         uint256 sentValue = 2 ether;
 
+        vm.prank(owner);
+        address[] memory supportedTokens = new address[](1);
+        supportedTokens[0] = address(0);
+        frostBlueprint.addSupportedTokens(supportedTokens);
+
+        // Add funds to the serviceOwner account.
+        vm.deal(serviceOwner, sentValue);
         // Attempt to deposit ETH with incorrect msg.value
         vm.prank(serviceOwner);
         vm.expectRevert(abi.encodeWithSelector(PaymentManagerBase.InvalidETHAmount.selector));
@@ -681,6 +694,9 @@ contract FrostBlueprintTest is Test {
 
         uint256 withdrawAmount = 1e18; // 1 token
 
+        vm.prank(rootChain);
+        frostBlueprint.onRegister(operator1PublicKey, "");
+
         // Attempt to withdraw unsupported token
         vm.prank(operator1);
         vm.expectRevert(abi.encodeWithSelector(PaymentManagerBase.TokenNotSupported.selector, address(newMockToken)));
@@ -693,7 +709,7 @@ contract FrostBlueprintTest is Test {
 
         // Attempt to withdraw as non-operator
         vm.prank(nonAuthorized);
-        vm.expectRevert("Unauthorized");
+        vm.expectRevert(abi.encodeWithSelector(PaymentManagerBase.Unauthorized.selector));
         frostBlueprint.withdraw(TNT_ERC20_ADDRESS, withdrawAmount);
     }
 }
