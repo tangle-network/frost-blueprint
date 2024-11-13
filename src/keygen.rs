@@ -188,9 +188,12 @@ where
 
 #[cfg(all(test, feature = "e2e"))]
 mod e2e {
+    use alloy_primitives::U256;
+    use alloy_sol_types::sol;
     use api::runtime_types::bounded_collections::bounded_vec::BoundedVec;
     use api::runtime_types::tangle_primitives::services::field::BoundedString;
     use api::runtime_types::tangle_primitives::services::field::Field;
+    use api::runtime_types::tangle_primitives::services::BlueprintManager;
     use api::services::calls::types::call::Args;
     use blueprint_test_utils::test_ext::*;
     use blueprint_test_utils::*;
@@ -213,6 +216,17 @@ mod e2e {
             .try_init();
     }
 
+    sol!(
+        #[sol(rpc)]
+        "contracts/src/FrostBlueprint.sol",
+    );
+
+    sol!(
+        #[sol(rpc)]
+        ERC20,
+        "contracts/out/ERC20.sol/ERC20.json"
+    );
+
     #[tokio::test(flavor = "multi_thread")]
     #[allow(clippy::needless_return)]
     async fn keygen() {
@@ -225,10 +239,14 @@ mod e2e {
 
         let manifest_path = base_path.join("Cargo.toml");
 
+        let ws_port = tangle.ws_port();
+        let http_rpc_url = format!("http://127.0.0.1:{ws_port}");
+        let ws_rpc_url = format!("ws://127.0.0.1:{ws_port}");
+
         let opts = Opts {
             pkg_name: option_env!("CARGO_BIN_NAME").map(ToOwned::to_owned),
-            http_rpc_url: format!("http://127.0.0.1:{}", tangle.ws_port()),
-            ws_rpc_url: format!("ws://127.0.0.1:{}", tangle.ws_port()),
+            http_rpc_url,
+            ws_rpc_url,
             manifest_path,
             signer: None,
             signer_evm: None,
@@ -245,6 +263,47 @@ mod e2e {
                 // as an operator for the relevant services, and, all gadgets are running
 
                 let keypair = handles[0].sr25519_id().clone();
+
+                // Fund the Blueprint manager contract with Some TNT.
+                let blueprint_manager = match svcs.blueprint.manager {
+                    BlueprintManager::Evm(contract_address) => contract_address.0.into(),
+                };
+
+                let tnt = 500;
+                let value = U256::from(tnt) * U256::from(10).pow(U256::from(18));
+
+                let signer = cargo_tangle::signer::load_evm_signer_from_env().unwrap();
+
+                let wallet = alloy_network::EthereumWallet::from(signer);
+
+                let ws_rpc_url = format!("ws://127.0.0.1:{ws_port}");
+                let provider = alloy_provider::ProviderBuilder::new()
+                    .with_recommended_fillers()
+                    .wallet(wallet)
+                    .on_ws(alloy_provider::WsConnect::new(ws_rpc_url))
+                    .await
+                    .unwrap();
+
+                let frost_blueprint = FrostBlueprint::new(blueprint_manager, provider.clone());
+                let tnt_token_address = frost_blueprint
+                    .TNT_ERC20_ADDRESS()
+                    .call()
+                    .await
+                    .map(|t| t.TNT_ERC20_ADDRESS)
+                    .unwrap();
+                let tnt_token = ERC20::new(tnt_token_address, provider.clone());
+
+                // Send Some TNT to the Blueprint manager contract.
+                let tx = tnt_token.transfer(blueprint_manager, value);
+                let receipt = tx.send().await.unwrap().get_receipt().await.unwrap();
+                assert!(
+                    receipt.status(),
+                    "Failed to fund the Blueprint manager contract with TNT"
+                );
+
+                // Double check that the Blueprint manager contract has been funded with TNT.
+                let balance = tnt_token.balanceOf(blueprint_manager).call().await.unwrap();
+                assert_eq!(balance._0, value);
 
                 let service = svcs.services.last().unwrap();
 

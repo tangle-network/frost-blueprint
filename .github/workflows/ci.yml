@@ -16,6 +16,8 @@ env:
   RUST_LOG: "gadget=debug"
   CARGO_TERM_COLOR: always
   TANGLE_RELEASE: "v1.2.3"
+  SIGNER: "//Alice"
+  EVM_SIGNER: "0xcb6df9de1efca7a3998a8ead4e02159d5fa99c3e0d4fd6432667390bb4726854"
 
 jobs:
   fmt:
@@ -64,6 +66,8 @@ jobs:
       - name: Forge build
         run: forge update && forge build
 
+      - uses: taiki-e/github-actions/free-device-space@main
+
       - name: Run Clippy
         run: cargo clippy --tests --examples -- -D warnings
 
@@ -101,6 +105,8 @@ jobs:
 
       - name: Forge build
         run: forge update && forge build
+
+      - uses: taiki-e/github-actions/free-device-space@main
 
       - name: tests
         run: cargo nextest run
@@ -184,6 +190,8 @@ jobs:
           echo "$HOME/.local/bin" >> $GITHUB_PATH
           # Check the Tangle node version
           tangle --version
+
+      - uses: taiki-e/github-actions/free-device-space@main
 
       - name: Build Blueprint
         run: cargo build --features e2e

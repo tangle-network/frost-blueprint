@@ -63,13 +63,27 @@ features = ["getrandom"]
 
 [dev-dependencies]
 tokio = { version = "^1", default-features = false, features = ["full", "rt-multi-thread"] }
-frost-core = { version = "2.0", default-features = false, features = ["serialization", "cheater-detection", "internals"] }
+frost-core = { version = "2.0", default-features = false, features = [
+    "serialization",
+    "cheater-detection",
+    "internals",
+] }
 round-based = { version = "0.3.0", default-features = false, features = ["derive", "dev"] }
 proptest = { version = "1.5.0", default-features = false, features = ["std", "bit-set", "fork", "timeout"] }
 test-strategy = { version = "0.4.0", default-features = false }
 
 cargo-tangle = "0.2"
 blueprint-test-utils = { version = "0.1", default-features = false, features = ["std"] }
+
+alloy-primitives = "0.7.2"
+alloy-provider = { version = "0.1", default-features = false, features = ["reqwest", "ws"] }
+alloy-signer = { version = "0.1" }
+alloy-signer-local = { version = "0.1" }
+alloy-rpc-client = "0.4.2"
+alloy-network = { version = "0.1" }
+alloy-json-abi = "0.7.2"
+alloy-sol-types = "0.7.2"
+alloy-contract = { version = "0.1" }
 
 [build-dependencies]
 blueprint-metadata = "0.1.6"
