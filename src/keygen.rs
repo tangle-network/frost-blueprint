@@ -186,8 +186,7 @@ where
     Ok(verifying_key)
 }
 
-// #[cfg(all(test, feature = "e2e"))]
-#[cfg(test)]
+#[cfg(all(test, feature = "e2e"))]
 mod e2e {
     use alloy_primitives::U256;
     use alloy_sol_types::sol;
@@ -224,8 +223,8 @@ mod e2e {
 
     sol!(
         #[sol(rpc)]
-        IERC20,
-        "contracts/out/ERC20/IERC20.sol/IERC20.json",
+        ERC20,
+        "contracts/out/ERC20.sol/ERC20.json"
     );
 
     #[tokio::test(flavor = "multi_thread")]
@@ -292,10 +291,10 @@ mod e2e {
                     .await
                     .map(|t| t.TNT_ERC20_ADDRESS)
                     .unwrap();
-                let tnt_token = IERC20::new(tnt_token_address, provider.clone());
+                let tnt_token = ERC20::new(tnt_token_address, provider.clone());
 
                 // Send Some TNT to the Blueprint manager contract.
-                let tx = tnt_token.transfer(blueprint_manager, value.into());
+                let tx = tnt_token.transfer(blueprint_manager, value);
                 let receipt = tx.send().await.unwrap().get_receipt().await.unwrap();
                 assert!(
                     receipt.status(),
@@ -304,7 +303,7 @@ mod e2e {
 
                 // Double check that the Blueprint manager contract has been funded with TNT.
                 let balance = tnt_token.balanceOf(blueprint_manager).call().await.unwrap();
-                assert_eq!(balance._0, value.into());
+                assert_eq!(balance._0, value);
 
                 let service = svcs.services.last().unwrap();
 
