@@ -57,7 +57,7 @@ round-based = { version = "0.3.0", default-features = false, features = ["derive
 
 
 [dependencies.gadget-sdk]
-version = "0.4"
+version = "0.5"
 default-features = false
 features = ["getrandom"]
 
