@@ -1,4 +1,5 @@
 use std::collections::BTreeMap;
+use std::sync::Arc;
 
 use api::services::events::JobCalled;
 use frost_core::keys::{KeyPackage, PublicKeyPackage};
@@ -6,7 +7,7 @@ use frost_core::{Ciphersuite, VerifyingKey};
 use gadget_sdk::futures::TryFutureExt;
 use gadget_sdk::network::round_based_compat::NetworkDeliveryWrapper;
 use gadget_sdk::network::Network;
-use gadget_sdk::subxt_core::ext::sp_core::{ecdsa, Pair};
+use gadget_sdk::subxt_core::ext::sp_core::{ecdsa, keccak_256, Pair};
 use gadget_sdk::subxt_core::utils::AccountId32;
 use gadget_sdk::{self as sdk, random};
 use sdk::event_listener::tangle::{
@@ -92,6 +93,10 @@ pub async fn keygen(
         .current_service_operators_ecdsa_keys()
         .map_err(Error::Other)
         .await?;
+
+    let blueprint_id = context.blueprint_id().map_err(Error::Other)?;
+    let call_id = context.current_call_id().await.map_err(Error::Other)?;
+    let blueprint_and_call_id = format!("{}-{}", blueprint_id, call_id);
     let my_ecdsa = context.config.first_ecdsa_signer()?;
 
     let current_call_id = context.current_call_id().map_err(Error::Other).await?;
@@ -106,6 +111,7 @@ pub async fn keygen(
             my_ecdsa.signer().public(),
             operators,
             threshold,
+            blueprint_and_call_id,
         )
         .await?
         .serialize()?,
@@ -117,6 +123,7 @@ pub async fn keygen(
                 my_ecdsa.signer().public(),
                 operators,
                 threshold,
+                blueprint_and_call_id,
             )
             .await?
             .serialize()?
@@ -144,6 +151,7 @@ async fn keygen_internal<C, R, N>(
     me: ecdsa::Public,
     participants: BTreeMap<AccountId32, ecdsa::Public>,
     t: u16,
+    unique_id: String,
 ) -> Result<VerifyingKey<C>, Error>
 where
     C: Ciphersuite + Send + Unpin,
@@ -168,7 +176,15 @@ where
         .enumerate()
         .map(|(j, (_, ecdsa))| (j as u16, ecdsa))
         .collect();
-    let delivery = NetworkDeliveryWrapper::new(net, i, parties);
+    let task_hash = keccak_256(
+        &[
+            &n.to_le_bytes()[..],
+            &t.to_le_bytes()[..],
+            unique_id.as_bytes(),
+        ]
+        .concat(),
+    );
+    let delivery = NetworkDeliveryWrapper::new(Arc::new(net.into()), i, task_hash, parties);
     let party = round_based::MpcParty::connected(delivery);
     let (key_package, public_key_package) =
         keygen_protocol::run::<R, C, _>(&mut rng, t, n, i, party, None).await?;

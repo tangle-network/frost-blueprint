@@ -19,6 +19,7 @@ use sdk::event_listener::tangle::{
 };
 use sdk::tangle_subxt::tangle_testnet_runtime::api;
 use std::collections::BTreeMap;
+use std::sync::Arc;
 
 use crate::FrostContext;
 
@@ -206,7 +207,9 @@ where
         "Invalid number of signers"
     );
 
-    let delivery = NetworkDeliveryWrapper::new(net, i, selected_parties);
+    let task_hash = keccak_256(&msg);
+    let delivery =
+        NetworkDeliveryWrapper::new(Arc::new(net.into()), i, task_hash, selected_parties);
     let party = round_based::MpcParty::connected(delivery);
     let signature = sign_protocol::run::<R, C, _>(
         &mut rng,
