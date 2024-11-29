@@ -4,6 +4,7 @@ use api::services::events::JobCalled;
 use frost_core::keys::{KeyPackage, PublicKeyPackage};
 use frost_core::{Ciphersuite, VerifyingKey};
 use gadget_sdk::futures::TryFutureExt;
+use gadget_sdk::network::round_based_compat::NetworkDeliveryWrapper;
 use gadget_sdk::network::Network;
 use gadget_sdk::subxt_core::ext::sp_core::{ecdsa, Pair};
 use gadget_sdk::subxt_core::utils::AccountId32;
@@ -14,7 +15,7 @@ use sdk::event_listener::tangle::{
 };
 use sdk::tangle_subxt::tangle_testnet_runtime::api;
 
-use crate::rounds::{delivery, keygen as keygen_protocol};
+use crate::rounds::keygen as keygen_protocol;
 use crate::FrostContext;
 
 #[derive(Debug, thiserror::Error)]
@@ -167,7 +168,7 @@ where
         .enumerate()
         .map(|(j, (_, ecdsa))| (j as u16, ecdsa))
         .collect();
-    let delivery = delivery::NetworkDeliveryWrapper::new(net, i, parties);
+    let delivery = NetworkDeliveryWrapper::new(net, i, parties);
     let party = round_based::MpcParty::connected(delivery);
     let (key_package, public_key_package) =
         keygen_protocol::run::<R, C, _>(&mut rng, t, n, i, party, None).await?;

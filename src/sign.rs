@@ -1,12 +1,10 @@
-use std::collections::BTreeMap;
-
-use crate::rounds::delivery;
 use crate::rounds::sign as sign_protocol;
 use api::services::events::JobCalled;
 use color_eyre::eyre;
 use frost_core::keys::{KeyPackage, PublicKeyPackage};
 use frost_core::{Ciphersuite, Signature};
 use gadget_sdk::futures::TryFutureExt;
+use gadget_sdk::network::round_based_compat::NetworkDeliveryWrapper;
 use gadget_sdk::network::Network;
 use gadget_sdk::random::rand::seq::IteratorRandom;
 use gadget_sdk::random::SeedableRng;
@@ -20,6 +18,7 @@ use sdk::event_listener::tangle::{
     TangleEventListener,
 };
 use sdk::tangle_subxt::tangle_testnet_runtime::api;
+use std::collections::BTreeMap;
 
 use crate::FrostContext;
 
@@ -207,7 +206,7 @@ where
         "Invalid number of signers"
     );
 
-    let delivery = delivery::NetworkDeliveryWrapper::new(net, i, selected_parties);
+    let delivery = NetworkDeliveryWrapper::new(net, i, selected_parties);
     let party = round_based::MpcParty::connected(delivery);
     let signature = sign_protocol::run::<R, C, _>(
         &mut rng,
