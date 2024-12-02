@@ -21,7 +21,9 @@ pub trait KVStore {
 
     fn get(&self, key: &Self::Key) -> Result<Option<Self::Value>, Self::Error>;
     fn set(&self, key: Self::Key, value: Self::Value) -> Result<(), Self::Error>;
+    #[allow(dead_code)]
     fn del(&self, key: &Self::Key) -> Result<(), Self::Error>;
+    #[allow(dead_code)]
     fn ex(&self, key: &Self::Key) -> Result<bool, Self::Error>;
 }
 

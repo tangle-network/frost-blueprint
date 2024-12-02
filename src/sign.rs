@@ -1,13 +1,11 @@
-use std::collections::BTreeMap;
-
-use crate::rounds::delivery;
 use crate::rounds::sign as sign_protocol;
 use api::services::events::JobCalled;
 use color_eyre::eyre;
 use frost_core::keys::{KeyPackage, PublicKeyPackage};
 use frost_core::{Ciphersuite, Signature};
+use gadget_sdk::contexts::MPCContext;
 use gadget_sdk::futures::TryFutureExt;
-use gadget_sdk::network::Network;
+use gadget_sdk::network::round_based_compat::NetworkDeliveryWrapper;
 use gadget_sdk::random::rand::seq::IteratorRandom;
 use gadget_sdk::random::SeedableRng;
 use gadget_sdk::subxt_core::ext::sp_core::ecdsa;
@@ -20,6 +18,7 @@ use sdk::event_listener::tangle::{
     TangleEventListener,
 };
 use sdk::tangle_subxt::tangle_testnet_runtime::api;
+use std::collections::BTreeMap;
 
 use crate::FrostContext;
 
@@ -94,7 +93,7 @@ impl<C: Ciphersuite> From<sign_protocol::Error<C>> for Error {
 #[tracing::instrument(skip_all, parent = context.config.span.clone(), err)]
 pub async fn sign(pubkey: Vec<u8>, msg: Vec<u8>, context: FrostContext) -> Result<Vec<u8>, Error> {
     let pubkey_hex = hex::encode(&pubkey);
-    let kv = context.store();
+    let kv = context.store.clone();
     let raw_info = kv.get(&pubkey_hex)?.ok_or(Error::KeyNotFound)?;
     let info_json_value = serde_json::from_slice::<serde_json::Value>(&raw_info)?;
     let ciphersuite = info_json_value["ciphersuite"]
@@ -106,21 +105,27 @@ pub async fn sign(pubkey: Vec<u8>, msg: Vec<u8>, context: FrostContext) -> Resul
         .await?;
 
     let my_ecdsa = context.config.first_ecdsa_signer()?;
+
+    let i = operators
+        .values()
+        .position(|k| k == &my_ecdsa.signer().public())
+        .ok_or(Error::SelfNotInOperators)?;
     let current_call_id = context.current_call_id().map_err(Error::Other).await?;
-    let net = context.keygen_network_backend(current_call_id);
     let rng = random::rand::rngs::OsRng;
+
     let res = match ciphersuite {
         frost_ed25519::Ed25519Sha512::ID => {
             let entry: crate::keygen::KeygenEntry<frost_ed25519::Ed25519Sha512> =
                 serde_json::from_value(info_json_value["entry"].clone())?;
             signing_internal(
                 rng,
-                net,
                 my_ecdsa.signer().public(),
                 operators,
                 entry.key_pkg,
                 entry.pub_key_pkg,
                 msg,
+                current_call_id,
+                &context,
             )
             .map_ok(|s| s.serialize().ok())
             .await
@@ -130,12 +135,13 @@ pub async fn sign(pubkey: Vec<u8>, msg: Vec<u8>, context: FrostContext) -> Resul
                 serde_json::from_value(info_json_value["entry"].clone())?;
             signing_internal(
                 rng,
-                net,
                 my_ecdsa.signer().public(),
                 operators,
                 entry.key_pkg,
                 entry.pub_key_pkg,
                 msg,
+                current_call_id,
+                &context,
             )
             .map_ok(|s| s.serialize().ok())
             .await
@@ -158,15 +164,17 @@ pub async fn sign(pubkey: Vec<u8>, msg: Vec<u8>, context: FrostContext) -> Resul
 }
 
 /// A genaric signing protocol over a given ciphersuite.
-#[tracing::instrument(skip(rng, net, key_pkg, pub_key_pkg, msg))]
-async fn signing_internal<C, R, N>(
+#[tracing::instrument(skip(rng, key_pkg, pub_key_pkg, msg, context))]
+#[allow(clippy::too_many_arguments)]
+async fn signing_internal<C, R>(
     mut rng: R,
-    net: N,
     my_ecdsa_key: ecdsa::Public,
     participants: BTreeMap<AccountId32, ecdsa::Public>,
     key_pkg: KeyPackage<C>,
     pub_key_pkg: PublicKeyPackage<C>,
     msg: Vec<u8>,
+    call_id: u64,
+    context: &FrostContext,
 ) -> Result<Signature<C>, Error>
 where
     C: Ciphersuite + Send + Unpin,
@@ -174,7 +182,6 @@ where
     <<<C as Ciphersuite>::Group as frost_core::Group>::Field as frost_core::Field>::Scalar:
         Send + Unpin,
     R: random::RngCore + random::CryptoRng,
-    N: Network + Unpin,
 {
     let pub_key = pub_key_pkg.verifying_key().serialize()?;
     let signers_seed = {
@@ -207,7 +214,16 @@ where
         "Invalid number of signers"
     );
 
-    let delivery = delivery::NetworkDeliveryWrapper::new(net, i, selected_parties);
+    let signing_task_hash =
+        gadget_sdk::compute_sha256_hash!(call_id.to_be_bytes(), &msg, "frost-signing");
+
+    let delivery = NetworkDeliveryWrapper::new(
+        context.network_backend.clone(),
+        i,
+        signing_task_hash,
+        selected_parties.clone(),
+    );
+
     let party = round_based::MpcParty::connected(delivery);
     let signature = sign_protocol::run::<R, C, _>(
         &mut rng,

@@ -40,6 +40,7 @@ async-trait = "0.1"
 color-eyre = "0.6"
 structopt = "0.3.26"
 hex = "0.4"
+k256 = { version = "0.13.4" }
 tokio = { version = "^1", default-features = false, features = ["full", "rt-multi-thread"] }
 tokio-stream = { version = "0.1", default-features = false }
 tracing-subscriber = { version = "0.3", features = ["parking_lot", "env-filter"] }
@@ -57,7 +58,7 @@ round-based = { version = "0.3.0", default-features = false, features = ["derive
 
 
 [dependencies.gadget-sdk]
-version = "0.4"
+version = "0.6.0"
 default-features = false
 features = ["getrandom"]
 
@@ -72,8 +73,8 @@ round-based = { version = "0.3.0", default-features = false, features = ["derive
 proptest = { version = "1.5.0", default-features = false, features = ["std", "bit-set", "fork", "timeout"] }
 test-strategy = { version = "0.4.0", default-features = false }
 
-cargo-tangle = "0.2"
-blueprint-test-utils = { version = "0.1", default-features = false, features = ["std"] }
+cargo-tangle = "0.3.1"
+blueprint-test-utils = { version = "0.2.0", default-features = false, features = ["std"] }
 
 alloy-primitives = "0.7.2"
 alloy-provider = { version = "0.1", default-features = false, features = ["reqwest", "ws"] }
@@ -86,7 +87,7 @@ alloy-sol-types = "0.7.2"
 alloy-contract = { version = "0.1" }
 
 [build-dependencies]
-blueprint-metadata = "0.1.6"
+blueprint-metadata = "0.2.0"
 
 [features]
 default = ["std", "kv-sled"]

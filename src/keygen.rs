@@ -1,10 +1,13 @@
 use std::collections::BTreeMap;
 
+use crate::rounds::keygen as keygen_protocol;
+use crate::FrostContext;
 use api::services::events::JobCalled;
 use frost_core::keys::{KeyPackage, PublicKeyPackage};
 use frost_core::{Ciphersuite, VerifyingKey};
+use gadget_sdk::contexts::MPCContext;
 use gadget_sdk::futures::TryFutureExt;
-use gadget_sdk::network::Network;
+use gadget_sdk::network::round_based_compat::NetworkDeliveryWrapper;
 use gadget_sdk::subxt_core::ext::sp_core::{ecdsa, Pair};
 use gadget_sdk::subxt_core::utils::AccountId32;
 use gadget_sdk::{self as sdk, random};
@@ -13,9 +16,6 @@ use sdk::event_listener::tangle::{
     TangleEventListener,
 };
 use sdk::tangle_subxt::tangle_testnet_runtime::api;
-
-use crate::rounds::{delivery, keygen as keygen_protocol};
-use crate::FrostContext;
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
@@ -92,30 +92,31 @@ pub async fn keygen(
         .map_err(Error::Other)
         .await?;
     let my_ecdsa = context.config.first_ecdsa_signer()?;
-
     let current_call_id = context.current_call_id().map_err(Error::Other).await?;
-    let net = context.keygen_network_backend(current_call_id);
+
     let rng = random::rand::rngs::OsRng;
-    let kv = context.store();
+    let kv = context.store.clone();
     let key = match ciphersuite.as_str() {
-        frost_ed25519::Ed25519Sha512::ID => keygen_internal::<frost_ed25519::Ed25519Sha512, _, _>(
+        frost_ed25519::Ed25519Sha512::ID => keygen_internal::<frost_ed25519::Ed25519Sha512, _>(
             rng,
-            net,
             kv,
             my_ecdsa.signer().public(),
             operators,
             threshold,
+            current_call_id,
+            &context,
         )
         .await?
         .serialize()?,
         frost_secp256k1::Secp256K1Sha256::ID => {
-            keygen_internal::<frost_secp256k1::Secp256K1Sha256, _, _>(
+            keygen_internal::<frost_secp256k1::Secp256K1Sha256, _>(
                 rng,
-                net,
                 kv,
                 my_ecdsa.signer().public(),
                 operators,
                 threshold,
+                current_call_id,
+                &context,
             )
             .await?
             .serialize()?
@@ -135,14 +136,15 @@ pub struct KeygenEntry<C: Ciphersuite> {
 }
 
 /// A genaric keygen protocol over any ciphersuite.
-#[tracing::instrument(skip(rng, net, kv), fields(ciphersuite = %C::ID,  i = tracing::field::Empty, n = %participants.len()))]
-async fn keygen_internal<C, R, N>(
+#[tracing::instrument(skip(rng, kv, context), fields(ciphersuite = %C::ID,  i = tracing::field::Empty, n = %participants.len()))]
+async fn keygen_internal<C, R>(
     mut rng: R,
-    net: N,
     kv: crate::kv::SharedDynKVStore<String, Vec<u8>>,
     me: ecdsa::Public,
     participants: BTreeMap<AccountId32, ecdsa::Public>,
     t: u16,
+    call_id: u64,
+    context: &FrostContext,
 ) -> Result<VerifyingKey<C>, Error>
 where
     C: Ciphersuite + Send + Unpin,
@@ -150,7 +152,6 @@ where
     <<<C as Ciphersuite>::Group as frost_core::Group>::Field as frost_core::Field>::Scalar:
         Send + Unpin,
     R: random::RngCore + random::CryptoRng,
-    N: Network + Unpin,
 {
     let n = participants.len();
     let i = participants
@@ -167,7 +168,15 @@ where
         .enumerate()
         .map(|(j, (_, ecdsa))| (j as u16, ecdsa))
         .collect();
-    let delivery = delivery::NetworkDeliveryWrapper::new(net, i, parties);
+
+    let keygen_task_hash = gadget_sdk::compute_sha256_hash!(call_id.to_be_bytes(), "frost-keygen");
+
+    let delivery = NetworkDeliveryWrapper::new(
+        context.network_backend.clone(),
+        i as _,
+        keygen_task_hash,
+        parties.clone(),
+    );
     let party = round_based::MpcParty::connected(delivery);
     let (key_package, public_key_package) =
         keygen_protocol::run::<R, C, _>(&mut rng, t, n, i, party, None).await?;
