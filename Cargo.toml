@@ -77,7 +77,7 @@ cargo-tangle = "0.3.1"
 blueprint-test-utils = { version = "0.2.0", default-features = false, features = ["std"] }
 
 alloy-primitives = "0.7.2"
-alloy-provider = { version = "0.1", default-features = false, features = ["reqwest", "ws"] }
+alloy-provider = { version = "0.5", default-features = false, features = ["reqwest", "ws"] }
 alloy-signer = { version = "0.1" }
 alloy-signer-local = { version = "0.1" }
 alloy-rpc-client = "0.4.2"
