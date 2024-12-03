@@ -133,7 +133,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ea8ebf106e84a1c37f86244df7da0c7587e697b71a0d565cce079449b85ac6f8"
 dependencies = [
  "alloy-consensus 0.5.4",
- "alloy-contract 0.5.4",
+ "alloy-contract",
  "alloy-core",
  "alloy-eips 0.5.4",
  "alloy-genesis",
@@ -195,30 +195,11 @@ dependencies = [
 
 [[package]]
 name = "alloy-contract"
-version = "0.1.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7dc6957ff706f9e5f6fd42f52a93e4bce476b726c92d077b348de28c4a76730c"
-dependencies = [
- "alloy-dyn-abi 0.7.7",
- "alloy-json-abi 0.7.7",
- "alloy-network 0.1.4",
- "alloy-primitives 0.7.7",
- "alloy-provider 0.1.4",
- "alloy-rpc-types-eth 0.1.4",
- "alloy-sol-types 0.7.7",
- "alloy-transport 0.1.4",
- "futures",
- "futures-util",
- "thiserror",
-]
-
-[[package]]
-name = "alloy-contract"
 version = "0.5.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "460ab80ce4bda1c80bcf96fe7460520476f2c7b734581c6567fac2708e2a60ef"
 dependencies = [
- "alloy-dyn-abi 0.8.14",
+ "alloy-dyn-abi",
  "alloy-json-abi 0.8.14",
  "alloy-network 0.5.4",
  "alloy-network-primitives",
@@ -239,28 +220,11 @@ version = "0.8.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c3d14d531c99995de71558e8e2206c27d709559ee8e5a0452b965ea82405a013"
 dependencies = [
- "alloy-dyn-abi 0.8.14",
+ "alloy-dyn-abi",
  "alloy-json-abi 0.8.14",
  "alloy-primitives 0.8.14",
  "alloy-rlp",
  "alloy-sol-types 0.8.14",
-]
-
-[[package]]
-name = "alloy-dyn-abi"
-version = "0.7.7"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "413902aa18a97569e60f679c23f46a18db1656d87ab4d4e49d0e1e52042f66df"
-dependencies = [
- "alloy-json-abi 0.7.7",
- "alloy-primitives 0.7.7",
- "alloy-sol-type-parser 0.7.7",
- "alloy-sol-types 0.7.7",
- "const-hex",
- "itoa",
- "serde",
- "serde_json",
- "winnow",
 ]
 
 [[package]]
@@ -2351,7 +2315,7 @@ dependencies = [
  "bitflags 2.6.0",
  "cexpr",
  "clang-sys",
- "itertools 0.12.1",
+ "itertools 0.11.0",
  "lazy_static",
  "lazycell",
  "log",
@@ -2557,7 +2521,7 @@ version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "30bffbe5959108cd2762d106985fa334b0ad13f4a4cf48d84f4334ebca3b23da"
 dependencies = [
- "alloy-contract 0.5.4",
+ "alloy-contract",
  "alloy-primitives 0.8.14",
  "alloy-provider 0.5.4",
  "alloy-rpc-types",
@@ -5132,7 +5096,7 @@ dependencies = [
 name = "frost-blueprint"
 version = "0.1.1"
 dependencies = [
- "alloy-contract 0.1.4",
+ "alloy-contract",
  "alloy-json-abi 0.7.7",
  "alloy-network 0.1.4",
  "alloy-primitives 0.7.7",
@@ -5536,7 +5500,7 @@ version = "0.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c59aa0622b4274583853e3682a198674e629d8668f1f60d5c8fad9b7bb0181f8"
 dependencies = [
- "alloy-contract 0.5.4",
+ "alloy-contract",
  "alloy-json-abi 0.8.14",
  "alloy-network 0.5.4",
  "alloy-primitives 0.8.14",
@@ -7309,7 +7273,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4979f22fdb869068da03c9f7528f8297c6fd2606bc3a4affe42e6a823fdb8da4"
 dependencies = [
  "cfg-if",
- "windows-targets 0.52.6",
+ "windows-targets 0.48.5",
 ]
 
 [[package]]
@@ -9064,7 +9028,7 @@ checksum = "4e69bf016dc406eff7d53a7d3f7cf1c2e72c82b9088aac1118591e36dd2cd3e9"
 dependencies = [
  "bitcoin_hashes",
  "rand",
- "rand_core 0.6.4",
+ "rand_core 0.5.1",
  "serde",
  "unicode-normalization",
 ]
@@ -14065,7 +14029,7 @@ version = "0.1.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cf221c93e13a30d793f7645a0e7762c55d169dbb0a49671918a2319d289b10bb"
 dependencies = [
- "windows-sys 0.59.0",
+ "windows-sys 0.48.0",
 ]
 
 [[package]]
