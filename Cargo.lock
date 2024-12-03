@@ -5138,7 +5138,7 @@ dependencies = [
  "alloy-primitives 0.7.7",
  "alloy-provider 0.1.4",
  "alloy-rpc-client 0.4.2",
- "alloy-signer 0.1.4",
+ "alloy-signer 0.5.4",
  "alloy-signer-local 0.1.4",
  "alloy-sol-types 0.7.7",
  "async-trait",
@@ -7309,7 +7309,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4979f22fdb869068da03c9f7528f8297c6fd2606bc3a4affe42e6a823fdb8da4"
 dependencies = [
  "cfg-if",
- "windows-targets 0.52.6",
+ "windows-targets 0.48.5",
 ]
 
 [[package]]
@@ -9064,7 +9064,7 @@ checksum = "4e69bf016dc406eff7d53a7d3f7cf1c2e72c82b9088aac1118591e36dd2cd3e9"
 dependencies = [
  "bitcoin_hashes",
  "rand",
- "rand_core 0.6.4",
+ "rand_core 0.5.1",
  "serde",
  "unicode-normalization",
 ]
