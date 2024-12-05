@@ -247,12 +247,13 @@ where
 
 #[cfg(all(test, feature = "e2e"))]
 mod e2e {
-    use crate::api::runtime_types::tangle_primitives::services::BlueprintManager;
+    use super::*;
     use alloy_primitives::U256;
     use alloy_sol_types::sol;
     use api::runtime_types::bounded_collections::bounded_vec::BoundedVec;
     use api::runtime_types::tangle_primitives::services::field::BoundedString;
     use api::runtime_types::tangle_primitives::services::field::Field;
+    use api::runtime_types::tangle_primitives::services::BlueprintServiceManager;
     use api::services::calls::types::call::Args;
     use blueprint_test_utils::test_ext::*;
     use blueprint_test_utils::*;
@@ -260,8 +261,6 @@ mod e2e {
     use frost_core::VerifyingKey;
     use gadget_sdk::error;
     use gadget_sdk::info;
-
-    use super::*;
 
     sol!(
         #[sol(rpc)]
@@ -317,7 +316,7 @@ mod e2e {
 
             // Fund the Blueprint manager contract with Some TNT.
             let blueprint_manager = match svcs.blueprint.manager {
-                BlueprintManager::Evm(contract_address) => contract_address.0.into(),
+                BlueprintServiceManager::Evm(contract_address) => contract_address.0.into(),
             };
 
             let tnt = 500;

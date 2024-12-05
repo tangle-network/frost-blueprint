@@ -58,7 +58,7 @@ round-based = { version = "0.3.0", default-features = false, features = ["derive
 
 
 [dependencies.gadget-sdk]
-version = "0.6.0"
+version = "0.6.1"
 default-features = false
 features = ["getrandom"]
 
@@ -73,18 +73,18 @@ round-based = { version = "0.3.0", default-features = false, features = ["derive
 proptest = { version = "1.5.0", default-features = false, features = ["std", "bit-set", "fork", "timeout"] }
 test-strategy = { version = "0.4.0", default-features = false }
 
-cargo-tangle = "0.3.1"
-blueprint-test-utils = { version = "0.2.0", default-features = false, features = ["std"] }
+cargo-tangle = "0.3.2"
+blueprint-test-utils = { version = "0.2.1", default-features = false, features = ["std"] }
 
-alloy-primitives = "0.7.2"
-alloy-provider = { version = "0.1", default-features = false, features = ["reqwest", "ws"] }
-alloy-signer = { version = "0.1" }
-alloy-signer-local = { version = "0.1" }
-alloy-rpc-client = "0.4.2"
-alloy-network = { version = "0.1" }
-alloy-json-abi = "0.7.2"
-alloy-sol-types = "0.7.2"
-alloy-contract = { version = "0.1" }
+alloy-primitives = "0.8.14"
+alloy-provider = { version = "0.5.4", default-features = false, features = ["reqwest", "ws"] }
+alloy-signer = { version = "0.5.4" }
+alloy-signer-local = { version = "0.5.4" }
+alloy-rpc-client = "0.5.4"
+alloy-network = { version = "0.5.4" }
+alloy-json-abi = "0.8.14"
+alloy-sol-types = "0.8.14"
+alloy-contract = { version = "0.5.4" }
 
 [build-dependencies]
 blueprint-metadata = "0.2.0"

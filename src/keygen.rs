@@ -202,7 +202,7 @@ mod e2e {
     use api::runtime_types::bounded_collections::bounded_vec::BoundedVec;
     use api::runtime_types::tangle_primitives::services::field::BoundedString;
     use api::runtime_types::tangle_primitives::services::field::Field;
-    use api::runtime_types::tangle_primitives::services::BlueprintManager;
+    use api::runtime_types::tangle_primitives::services::BlueprintServiceManager;
     use api::services::calls::types::call::Args;
     use blueprint_test_utils::test_ext::*;
     use blueprint_test_utils::*;
@@ -275,7 +275,7 @@ mod e2e {
 
                 // Fund the Blueprint manager contract with Some TNT.
                 let blueprint_manager = match svcs.blueprint.manager {
-                    BlueprintManager::Evm(contract_address) => contract_address.0.into(),
+                    BlueprintServiceManager::Evm(contract_address) => contract_address.0.into(),
                 };
 
                 let tnt = 500;
