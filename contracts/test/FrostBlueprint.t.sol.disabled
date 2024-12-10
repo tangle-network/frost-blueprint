@@ -5,13 +5,17 @@ import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {Test} from "forge-std/Test.sol";
 import {console2} from "forge-std/console2.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
+import {ServiceOperators} from "tnt-core/IBlueprintServiceManager.sol";
 import "../src/FrostBlueprint.sol";
 
 contract ERC20Mock is ERC20, Ownable {
-    constructor(string memory name, string memory symbol, uint8 decimals, address owner, uint256 initialSupply)
-        Ownable(owner)
-        ERC20(name, symbol)
-    {
+    constructor(
+        string memory name,
+        string memory symbol,
+        uint8 decimals,
+        address owner,
+        uint256 initialSupply
+    ) Ownable(owner) ERC20(name, symbol) {
         mint(owner, initialSupply * (10 ** uint256(decimals)));
     }
 
@@ -42,11 +46,21 @@ contract FrostBlueprintTest is Test {
     address public nonAuthorized;
 
     // Constants
-    address constant TNT_ERC20_ADDRESS = address(0x0000000000000000000000000000000000000802);
+    address constant TNT_ERC20_ADDRESS =
+        address(0x0000000000000000000000000000000000000802);
 
     bytes32 public constant DEFAULT_ADMIN_ROLE = 0x00;
     uint8 constant KEYGEN_JOB_ID = 0;
     uint8 constant SIGN_JOB_ID = 1;
+
+    ServiceOperators.PriceTargets defaultPriceTargets =
+        ServiceOperators.PriceTargets({
+            cpu: 1,
+            mem: 1,
+            storage_hdd: 1,
+            storage_ssd: 1,
+            storage_nvme: 1
+        });
 
     // Setup function runs before each test
     function setUp() public {
@@ -76,7 +90,9 @@ contract FrostBlueprintTest is Test {
     }
 
     // Helper function to convert a public key to an operator address
-    function operatorAddress(bytes memory publicKey) internal pure returns (address) {
+    function operatorAddress(
+        bytes memory publicKey
+    ) internal pure returns (address) {
         return address(uint160(uint256(keccak256(publicKey))));
     }
 
@@ -86,7 +102,9 @@ contract FrostBlueprintTest is Test {
         assertTrue(frostBlueprint.hasRole(DEFAULT_ADMIN_ROLE, owner));
 
         // Check that rootChain has ROOT_CHAIN_ROLE and DEFAULT_ADMIN_ROLE
-        assertTrue(frostBlueprint.hasRole(frostBlueprint.ROOT_CHAIN_ROLE(), rootChain));
+        assertTrue(
+            frostBlueprint.hasRole(frostBlueprint.ROOT_CHAIN_ROLE(), rootChain)
+        );
         assertTrue(frostBlueprint.hasRole(DEFAULT_ADMIN_ROLE, rootChain));
 
         // Check that TNT_ERC20_ADDRESS is supported by default
@@ -98,16 +116,25 @@ contract FrostBlueprintTest is Test {
                 break;
             }
         }
-        assertTrue(tokenSupported, "TNT_ERC20_ADDRESS should be supported by default");
+        assertTrue(
+            tokenSupported,
+            "TNT_ERC20_ADDRESS should be supported by default"
+        );
 
         // Check initial job costs
         // Assuming mockERC20 is deployed at TNT_ERC20_ADDRESS
         // Verify keygen job cost
-        uint256 keygenCost = frostBlueprint.jobCost(KEYGEN_JOB_ID, TNT_ERC20_ADDRESS);
+        uint256 keygenCost = frostBlueprint.jobCost(
+            KEYGEN_JOB_ID,
+            TNT_ERC20_ADDRESS
+        );
         assertEq(keygenCost, 1e15, "Keygen job cost should be 0.001 ether");
 
         // Verify sign job cost
-        uint256 signCost = frostBlueprint.jobCost(SIGN_JOB_ID, TNT_ERC20_ADDRESS);
+        uint256 signCost = frostBlueprint.jobCost(
+            SIGN_JOB_ID,
+            TNT_ERC20_ADDRESS
+        );
         assertEq(signCost, 1e13, "Sign job cost should be 0.00001 ether");
     }
 
@@ -119,9 +146,14 @@ contract FrostBlueprintTest is Test {
         frostBlueprint.onRegister(operatorPublicKey, "");
 
         // Verify that operator1 has OPERATOR_ROLE
-        address expectedOperator = frostBlueprint.operatorAddressFromPublicKey(operatorPublicKey);
+        address expectedOperator = frostBlueprint.operatorAddressFromPublicKey(
+            operatorPublicKey
+        );
         assertTrue(
-            frostBlueprint.hasRole(frostBlueprint.OPERATOR_ROLE(), expectedOperator),
+            frostBlueprint.hasRole(
+                frostBlueprint.OPERATOR_ROLE(),
+                expectedOperator
+            ),
             "Operator should have OPERATOR_ROLE"
         );
 
@@ -134,7 +166,12 @@ contract FrostBlueprintTest is Test {
         // Attempt to register operator1 from non-rootChain address
         vm.prank(nonAuthorized);
         vm.expectRevert("RootChain: Only root chain can call this function");
-        frostBlueprint.onRegister(operator1PublicKey, "");
+        ServiceOperators.OperatorPreferences
+            memory operatorPref = ServiceOperators.OperatorPreferences({
+                ecdsaPublicKey: operator1PublicKey,
+                priceTargets: defaultPriceTargets
+            });
+        frostBlueprint.onRegister(operatorPref, "");
     }
 
     // Test adding service operators
@@ -150,13 +187,24 @@ contract FrostBlueprintTest is Test {
         bytes[] memory operators = new bytes[](1);
         operators[0] = operatorPublicKey;
         vm.prank(rootChain);
-        frostBlueprint.onRequest(serviceId, operators, "");
+        ServiceOperators.RequestParams memory requestParams = ServiceOperators
+            .RequestParams({
+                serviceId: serviceId,
+                operators: operators
+                // Initialize other fields if necessary
+            });
+        frostBlueprint.onRequest(requestParams);
 
         // Verify that operator1 is added to the service
-        address[] memory serviceOperators = frostBlueprint.serviceOperators(serviceId);
+        address[] memory serviceOperators = frostBlueprint.serviceOperators(
+            serviceId
+        );
         assertEq(serviceOperators.length, 1, "Service should have 1 operator");
 
-        assertTrue(serviceOperators[0] == operatorAddress(operatorPublicKey), "Operator1 should be added to service");
+        assertTrue(
+            serviceOperators[0] == operatorAddress(operatorPublicKey),
+            "Operator1 should be added to service"
+        );
     }
 
     // Test adding the same operator twice should revert
@@ -176,7 +224,13 @@ contract FrostBlueprintTest is Test {
 
         // Attempt to add operator1 again to the same service
         vm.prank(rootChain);
-        vm.expectRevert(abi.encodeWithSelector(FrostBlueprint.OperatorAlreadyAdded.selector, serviceId, operator1));
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                FrostBlueprint.OperatorAlreadyAdded.selector,
+                serviceId,
+                operator1
+            )
+        );
         frostBlueprint.onRequest(serviceId, operators, "");
     }
 
@@ -185,12 +239,19 @@ contract FrostBlueprintTest is Test {
         uint64 serviceId = 1;
 
         bytes[] memory operators = new bytes[](1);
-        bytes memory unregisteredOperatorPK = abi.encodePacked(operator2PublicKey);
+        bytes memory unregisteredOperatorPK = abi.encodePacked(
+            operator2PublicKey
+        );
         operators[0] = unregisteredOperatorPK;
 
         // Attempt to add unregistered operator2 to serviceId
         vm.prank(rootChain);
-        vm.expectRevert(abi.encodeWithSelector(FrostBlueprint.OperatorNotRegistered.selector, operator2));
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                FrostBlueprint.OperatorNotRegistered.selector,
+                operator2
+            )
+        );
         frostBlueprint.onRequest(serviceId, operators, "");
     }
 
@@ -224,15 +285,32 @@ contract FrostBlueprintTest is Test {
 
         // Simulate rootChain calling onJobResult
         vm.prank(rootChain);
-        frostBlueprint.onJobResult(serviceId, KEYGEN_JOB_ID, 1, operator1PublicKey, inputs, outputs);
+        frostBlueprint.onJobResult(
+            serviceId,
+            KEYGEN_JOB_ID,
+            1,
+            operator1PublicKey,
+            inputs,
+            outputs
+        );
 
         // Verify that operator1 has been credited
-        uint256 keygenJobCost = frostBlueprint.jobCost(KEYGEN_JOB_ID, TNT_ERC20_ADDRESS);
+        uint256 keygenJobCost = frostBlueprint.jobCost(
+            KEYGEN_JOB_ID,
+            TNT_ERC20_ADDRESS
+        );
         uint256 avgDuration = frostBlueprint.KEYGEN_JOB_DURATION_SECS();
         uint256 operatorsCount = 1;
         uint256 expectedAmount = keygenJobCost * avgDuration * operatorsCount;
-        uint256 actualBalance = frostBlueprint.operatorBalanceOf(operator1, TNT_ERC20_ADDRESS);
-        assertEq(actualBalance, expectedAmount, "Operator1 should be credited correctly");
+        uint256 actualBalance = frostBlueprint.operatorBalanceOf(
+            operator1,
+            TNT_ERC20_ADDRESS
+        );
+        assertEq(
+            actualBalance,
+            expectedAmount,
+            "Operator1 should be credited correctly"
+        );
     }
 
     // Test handling sign job result
@@ -266,14 +344,31 @@ contract FrostBlueprintTest is Test {
 
         // Simulate rootChain calling onJobResult
         vm.prank(rootChain);
-        frostBlueprint.onJobResult(serviceId, SIGN_JOB_ID, 1, operator1PublicKey, inputs, outputs);
+        frostBlueprint.onJobResult(
+            serviceId,
+            SIGN_JOB_ID,
+            1,
+            operator1PublicKey,
+            inputs,
+            outputs
+        );
 
         // Verify that operator1 has been credited
-        uint256 signJobCost = frostBlueprint.jobCost(SIGN_JOB_ID, TNT_ERC20_ADDRESS);
+        uint256 signJobCost = frostBlueprint.jobCost(
+            SIGN_JOB_ID,
+            TNT_ERC20_ADDRESS
+        );
         uint256 avgDuration = frostBlueprint.SIGN_JOB_DURATION_SECS();
         uint256 expectedAmount = signJobCost * avgDuration;
-        uint256 actualBalance = frostBlueprint.operatorBalanceOf(operator1, TNT_ERC20_ADDRESS);
-        assertEq(actualBalance, expectedAmount, "Operator1 should be credited correctly for sign job");
+        uint256 actualBalance = frostBlueprint.operatorBalanceOf(
+            operator1,
+            TNT_ERC20_ADDRESS
+        );
+        assertEq(
+            actualBalance,
+            expectedAmount,
+            "Operator1 should be credited correctly for sign job"
+        );
     }
 
     // Test handling unsupported job
@@ -285,8 +380,20 @@ contract FrostBlueprintTest is Test {
 
         // Simulate rootChain calling onJobResult with unsupported job
         vm.prank(rootChain);
-        vm.expectRevert(abi.encodeWithSelector(FrostBlueprint.UnsupportedJob.selector, unsupportedJobId));
-        frostBlueprint.onJobResult(serviceId, unsupportedJobId, 1, operatorPublicKey, "", "");
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                FrostBlueprint.UnsupportedJob.selector,
+                unsupportedJobId
+            )
+        );
+        frostBlueprint.onJobResult(
+            serviceId,
+            unsupportedJobId,
+            1,
+            operatorPublicKey,
+            "",
+            ""
+        );
     }
 
     // Test handling invalid ECDSA public key
@@ -309,8 +416,22 @@ contract FrostBlueprintTest is Test {
 
         // Simulate rootChain calling onJobResult
         vm.prank(rootChain);
-        vm.expectRevert(abi.encodeWithSelector(FrostBlueprint.InvalidECDSAPublicKey.selector));
-        frostBlueprint.onJobResult(serviceId, KEYGEN_JOB_ID, 1, operatorPublicKey, "", outputs);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                FrostBlueprint.InvalidECDSAPublicKey.selector
+            )
+        );
+        ServiceOperators.JobResultParams memory jobResultParams = ServiceOperators
+            .JobResultParams({
+                serviceId: serviceId,
+                jobId: KEYGEN_JOB_ID,
+                jobCallId: 1,
+                operator: operatorPublicKey,
+                inputs: "",
+                outputs: outputs
+                // Initialize other fields if necessary
+            });
+        frostBlueprint.onJobResult(jobResultParams);
     }
 
     // Test calculateServiceCost
@@ -323,8 +444,15 @@ contract FrostBlueprintTest is Test {
         uint256 expectedCostPerSec = oneKeygenCall + oneSignCall;
         uint256 expectedTotalCost = expectedCostPerSec * serviceDuration;
 
-        uint256 actualCost = frostBlueprint.calculateServiceCost(serviceDuration, TNT_ERC20_ADDRESS);
-        assertEq(actualCost, expectedTotalCost, "Service cost should be calculated correctly");
+        uint256 actualCost = frostBlueprint.calculateServiceCost(
+            serviceDuration,
+            TNT_ERC20_ADDRESS
+        );
+        assertEq(
+            actualCost,
+            expectedTotalCost,
+            "Service cost should be calculated correctly"
+        );
     }
 
     // Test updateJobCost
@@ -335,18 +463,40 @@ contract FrostBlueprintTest is Test {
 
         // Update keygen job cost
         vm.prank(owner);
-        frostBlueprint.updateJobCost(KEYGEN_JOB_ID, TNT_ERC20_ADDRESS, newKeygenCost);
+        frostBlueprint.updateJobCost(
+            KEYGEN_JOB_ID,
+            TNT_ERC20_ADDRESS,
+            newKeygenCost
+        );
 
         // Update sign job cost
         vm.prank(owner);
-        frostBlueprint.updateJobCost(SIGN_JOB_ID, TNT_ERC20_ADDRESS, newSignCost);
+        frostBlueprint.updateJobCost(
+            SIGN_JOB_ID,
+            TNT_ERC20_ADDRESS,
+            newSignCost
+        );
 
         // Verify updates
-        uint256 updatedKeygenCost = frostBlueprint.jobCost(KEYGEN_JOB_ID, TNT_ERC20_ADDRESS);
-        assertEq(updatedKeygenCost, newKeygenCost, "Keygen job cost should be updated");
+        uint256 updatedKeygenCost = frostBlueprint.jobCost(
+            KEYGEN_JOB_ID,
+            TNT_ERC20_ADDRESS
+        );
+        assertEq(
+            updatedKeygenCost,
+            newKeygenCost,
+            "Keygen job cost should be updated"
+        );
 
-        uint256 updatedSignCost = frostBlueprint.jobCost(SIGN_JOB_ID, TNT_ERC20_ADDRESS);
-        assertEq(updatedSignCost, newSignCost, "Sign job cost should be updated");
+        uint256 updatedSignCost = frostBlueprint.jobCost(
+            SIGN_JOB_ID,
+            TNT_ERC20_ADDRESS
+        );
+        assertEq(
+            updatedSignCost,
+            newSignCost,
+            "Sign job cost should be updated"
+        );
     }
 
     // Test updateJobCost with unsupported job ID
@@ -355,14 +505,29 @@ contract FrostBlueprintTest is Test {
         uint256 newCost = 1e12;
 
         vm.prank(owner);
-        vm.expectRevert(abi.encodeWithSelector(FrostBlueprint.UnsupportedJob.selector, unsupportedJobId));
-        frostBlueprint.updateJobCost(unsupportedJobId, TNT_ERC20_ADDRESS, newCost);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                FrostBlueprint.UnsupportedJob.selector,
+                unsupportedJobId
+            )
+        );
+        frostBlueprint.updateJobCost(
+            unsupportedJobId,
+            TNT_ERC20_ADDRESS,
+            newCost
+        );
     }
 
     // Test adding supported tokens
     function testAddSupportedTokens() public {
         // Deploy a new mock token
-        ERC20Mock newMockToken = new ERC20Mock("New Mock Token", "NMTKN", 18, owner, 1e24);
+        ERC20Mock newMockToken = new ERC20Mock(
+            "New Mock Token",
+            "NMTKN",
+            18,
+            owner,
+            1e24
+        );
 
         address[] memory tokensToAdd = new address[](1);
         tokensToAdd[0] = address(newMockToken);
@@ -379,7 +544,10 @@ contract FrostBlueprintTest is Test {
                 break;
             }
         }
-        assertTrue(tokenAdded, "New mock token should be added to supported tokens");
+        assertTrue(
+            tokenAdded,
+            "New mock token should be added to supported tokens"
+        );
     }
 
     // Test adding already supported token should revert
@@ -388,7 +556,12 @@ contract FrostBlueprintTest is Test {
         tokensToAdd[0] = TNT_ERC20_ADDRESS;
 
         vm.prank(owner);
-        vm.expectRevert(abi.encodeWithSelector(PaymentManagerBase.TokenAlreadySupported.selector, TNT_ERC20_ADDRESS));
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                PaymentManagerBase.TokenAlreadySupported.selector,
+                TNT_ERC20_ADDRESS
+            )
+        );
         frostBlueprint.addSupportedTokens(tokensToAdd);
     }
 
@@ -409,19 +582,33 @@ contract FrostBlueprintTest is Test {
                 break;
             }
         }
-        assertTrue(tokenRemoved, "TNT_ERC20_ADDRESS should be removed from supported tokens");
+        assertTrue(
+            tokenRemoved,
+            "TNT_ERC20_ADDRESS should be removed from supported tokens"
+        );
     }
 
     // Test removing a token that is not supported should revert
     function testRemoveUnsupportedToken() public {
         // Deploy a new mock token
-        ERC20Mock newMockToken = new ERC20Mock("New Mock Token", "NMTKN", 18, owner, 1e24);
+        ERC20Mock newMockToken = new ERC20Mock(
+            "New Mock Token",
+            "NMTKN",
+            18,
+            owner,
+            1e24
+        );
 
         address[] memory tokensToRemove = new address[](1);
         tokensToRemove[0] = address(newMockToken);
 
         vm.prank(owner);
-        vm.expectRevert(abi.encodeWithSelector(PaymentManagerBase.TokenNotSupported.selector, address(newMockToken)));
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                PaymentManagerBase.TokenNotSupported.selector,
+                address(newMockToken)
+            )
+        );
         frostBlueprint.removeSupportedTokens(tokensToRemove);
     }
 
@@ -430,7 +617,13 @@ contract FrostBlueprintTest is Test {
         uint256 depositAmount = 1e18; // 1 token
 
         // Deploy a new mock token and add to supported tokens
-        ERC20Mock newMockToken = new ERC20Mock("New Mock Token", "NMTKN", 18, owner, 1e24);
+        ERC20Mock newMockToken = new ERC20Mock(
+            "New Mock Token",
+            "NMTKN",
+            18,
+            owner,
+            1e24
+        );
         address[] memory tokensToAdd = new address[](1);
         tokensToAdd[0] = address(newMockToken);
         vm.prank(owner);
@@ -449,8 +642,14 @@ contract FrostBlueprintTest is Test {
         frostBlueprint.deposit(address(newMockToken), depositAmount);
 
         // Verify the contract's balance
-        uint256 contractBalance = newMockToken.balanceOf(address(frostBlueprint));
-        assertEq(contractBalance, depositAmount, "FrostBlueprint should have the deposited tokens");
+        uint256 contractBalance = newMockToken.balanceOf(
+            address(frostBlueprint)
+        );
+        assertEq(
+            contractBalance,
+            depositAmount,
+            "FrostBlueprint should have the deposited tokens"
+        );
     }
 
     // Test deposit ETH by service owner
@@ -464,7 +663,11 @@ contract FrostBlueprintTest is Test {
 
         // Verify the contract's ETH balance
         uint256 contractBalance = address(frostBlueprint).balance;
-        assertEq(contractBalance, depositAmount, "FrostBlueprint should have the deposited ETH");
+        assertEq(
+            contractBalance,
+            depositAmount,
+            "FrostBlueprint should have the deposited ETH"
+        );
     }
 
     // Test deposit with invalid amount should revert
@@ -473,7 +676,9 @@ contract FrostBlueprintTest is Test {
 
         // Attempt to deposit with amount 0
         vm.prank(serviceOwner);
-        vm.expectRevert(abi.encodeWithSelector(PaymentManagerBase.InvalidAmount.selector));
+        vm.expectRevert(
+            abi.encodeWithSelector(PaymentManagerBase.InvalidAmount.selector)
+        );
         frostBlueprint.deposit(address(0), depositAmount);
     }
 
@@ -496,7 +701,11 @@ contract FrostBlueprintTest is Test {
 
         // Credit operator1
         vm.prank(rootChain);
-        frostBlueprint.creditOperator(operator1, TNT_ERC20_ADDRESS, withdrawAmount);
+        frostBlueprint.creditOperator(
+            operator1,
+            TNT_ERC20_ADDRESS,
+            withdrawAmount
+        );
 
         // Record initial balance of operator1
         uint256 initialBalance = mockERC20.balanceOf(operator1);
@@ -507,11 +716,22 @@ contract FrostBlueprintTest is Test {
 
         // Verify operator1 received tokens
         uint256 finalBalance = mockERC20.balanceOf(operator1);
-        assertEq(finalBalance, initialBalance + withdrawAmount, "Operator1 should receive withdrawn tokens");
+        assertEq(
+            finalBalance,
+            initialBalance + withdrawAmount,
+            "Operator1 should receive withdrawn tokens"
+        );
 
         // Verify operator's balance in FrostBlueprint
-        uint256 operatorBalance = frostBlueprint.operatorBalanceOf(operator1, TNT_ERC20_ADDRESS);
-        assertEq(operatorBalance, 0, "Operator1's balance should be zero after withdrawal");
+        uint256 operatorBalance = frostBlueprint.operatorBalanceOf(
+            operator1,
+            TNT_ERC20_ADDRESS
+        );
+        assertEq(
+            operatorBalance,
+            0,
+            "Operator1's balance should be zero after withdrawal"
+        );
     }
 
     // Test withdraw ETH by operator
@@ -547,11 +767,22 @@ contract FrostBlueprintTest is Test {
 
         // Verify operator1 received ETH
         uint256 finalBalance = operator1.balance;
-        assertEq(finalBalance, initialBalance + withdrawAmount, "Operator1 should receive withdrawn ETH");
+        assertEq(
+            finalBalance,
+            initialBalance + withdrawAmount,
+            "Operator1 should receive withdrawn ETH"
+        );
 
         // Verify operator's ETH balance in FrostBlueprint
-        uint256 operatorETHBalance = frostBlueprint.operatorBalanceOf(operator1, address(0));
-        assertEq(operatorETHBalance, 0, "Operator1's ETH balance should be zero after withdrawal");
+        uint256 operatorETHBalance = frostBlueprint.operatorBalanceOf(
+            operator1,
+            address(0)
+        );
+        assertEq(
+            operatorETHBalance,
+            0,
+            "Operator1's ETH balance should be zero after withdrawal"
+        );
     }
 
     // Test withdraw with insufficient balance should revert
@@ -564,7 +795,12 @@ contract FrostBlueprintTest is Test {
 
         // Attempt to withdraw without crediting
         vm.prank(operator1);
-        vm.expectRevert(abi.encodeWithSelector(PaymentManagerBase.InsufficientBalance.selector, TNT_ERC20_ADDRESS));
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                PaymentManagerBase.InsufficientBalance.selector,
+                TNT_ERC20_ADDRESS
+            )
+        );
         frostBlueprint.withdraw(TNT_ERC20_ADDRESS, withdrawAmount);
     }
 
@@ -585,22 +821,41 @@ contract FrostBlueprintTest is Test {
         frostBlueprint.deposit(TNT_ERC20_ADDRESS, depositAmount);
 
         vm.prank(rootChain);
-        frostBlueprint.creditOperator(operator1, TNT_ERC20_ADDRESS, withdrawAmount);
+        frostBlueprint.creditOperator(
+            operator1,
+            TNT_ERC20_ADDRESS,
+            withdrawAmount
+        );
 
         // Record initial balance of nonAuthorized
         uint256 initialBalance = mockERC20.balanceOf(nonAuthorized);
 
         // Simulate operator1 withdrawing to nonAuthorized
         vm.prank(operator1);
-        frostBlueprint.withdrawAndTransfer(TNT_ERC20_ADDRESS, withdrawAmount, nonAuthorized);
+        frostBlueprint.withdrawAndTransfer(
+            TNT_ERC20_ADDRESS,
+            withdrawAmount,
+            nonAuthorized
+        );
 
         // Verify nonAuthorized received tokens
         uint256 finalBalance = mockERC20.balanceOf(nonAuthorized);
-        assertEq(finalBalance, initialBalance + withdrawAmount, "nonAuthorized should receive withdrawn tokens");
+        assertEq(
+            finalBalance,
+            initialBalance + withdrawAmount,
+            "nonAuthorized should receive withdrawn tokens"
+        );
 
         // Verify operator's balance in FrostBlueprint
-        uint256 operatorBalance = frostBlueprint.operatorBalanceOf(operator1, TNT_ERC20_ADDRESS);
-        assertEq(operatorBalance, 0, "Operator1's balance should be zero after withdrawal");
+        uint256 operatorBalance = frostBlueprint.operatorBalanceOf(
+            operator1,
+            TNT_ERC20_ADDRESS
+        );
+        assertEq(
+            operatorBalance,
+            0,
+            "Operator1's balance should be zero after withdrawal"
+        );
     }
 
     // Test withdrawAndTransfer with invalid recipient should revert
@@ -616,12 +871,25 @@ contract FrostBlueprintTest is Test {
         mockERC20.transfer(address(frostBlueprint), withdrawAmount);
 
         vm.prank(rootChain);
-        frostBlueprint.creditOperator(operator1, TNT_ERC20_ADDRESS, withdrawAmount);
+        frostBlueprint.creditOperator(
+            operator1,
+            TNT_ERC20_ADDRESS,
+            withdrawAmount
+        );
 
         // Attempt to withdraw to address(0)
         vm.prank(operator1);
-        vm.expectRevert(abi.encodeWithSelector(PaymentManagerBase.InvalidRecipient.selector, address(0)));
-        frostBlueprint.withdrawAndTransfer(TNT_ERC20_ADDRESS, withdrawAmount, address(0));
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                PaymentManagerBase.InvalidRecipient.selector,
+                address(0)
+            )
+        );
+        frostBlueprint.withdrawAndTransfer(
+            TNT_ERC20_ADDRESS,
+            withdrawAmount,
+            address(0)
+        );
     }
 
     // Test deposit ETH with incorrect msg.value should revert
@@ -638,14 +906,22 @@ contract FrostBlueprintTest is Test {
         vm.deal(serviceOwner, sentValue);
         // Attempt to deposit ETH with incorrect msg.value
         vm.prank(serviceOwner);
-        vm.expectRevert(abi.encodeWithSelector(PaymentManagerBase.InvalidETHAmount.selector));
+        vm.expectRevert(
+            abi.encodeWithSelector(PaymentManagerBase.InvalidETHAmount.selector)
+        );
         frostBlueprint.deposit{value: sentValue}(address(0), depositAmount);
     }
 
     // Test deposit unsupported token should revert
     function testDepositUnsupportedToken() public {
         // Deploy a new mock token but do not add to supported tokens
-        ERC20Mock newMockToken = new ERC20Mock("Unsupported Token", "USTKN", 18, owner, 1e24);
+        ERC20Mock newMockToken = new ERC20Mock(
+            "Unsupported Token",
+            "USTKN",
+            18,
+            owner,
+            1e24
+        );
 
         uint256 depositAmount = 1e18; // 1 token
 
@@ -655,14 +931,25 @@ contract FrostBlueprintTest is Test {
 
         // Attempt to deposit unsupported token
         vm.prank(serviceOwner);
-        vm.expectRevert(abi.encodeWithSelector(PaymentManagerBase.TokenNotSupported.selector, address(newMockToken)));
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                PaymentManagerBase.TokenNotSupported.selector,
+                address(newMockToken)
+            )
+        );
         frostBlueprint.deposit(address(newMockToken), depositAmount);
     }
 
     // Test withdraw unsupported token should revert
     function testWithdrawUnsupportedToken() public {
         // Deploy a new mock token but do not add to supported tokens
-        ERC20Mock newMockToken = new ERC20Mock("Unsupported Token", "USTKN", 18, owner, 1e24);
+        ERC20Mock newMockToken = new ERC20Mock(
+            "Unsupported Token",
+            "USTKN",
+            18,
+            owner,
+            1e24
+        );
 
         uint256 withdrawAmount = 1e18; // 1 token
 
@@ -671,7 +958,12 @@ contract FrostBlueprintTest is Test {
 
         // Attempt to withdraw unsupported token
         vm.prank(operator1);
-        vm.expectRevert(abi.encodeWithSelector(PaymentManagerBase.TokenNotSupported.selector, address(newMockToken)));
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                PaymentManagerBase.TokenNotSupported.selector,
+                address(newMockToken)
+            )
+        );
         frostBlueprint.withdraw(address(newMockToken), withdrawAmount);
     }
 
@@ -681,7 +973,9 @@ contract FrostBlueprintTest is Test {
 
         // Attempt to withdraw as non-operator
         vm.prank(nonAuthorized);
-        vm.expectRevert(abi.encodeWithSelector(PaymentManagerBase.Unauthorized.selector));
+        vm.expectRevert(
+            abi.encodeWithSelector(PaymentManagerBase.Unauthorized.selector)
+        );
         frostBlueprint.withdraw(TNT_ERC20_ADDRESS, withdrawAmount);
     }
 }
