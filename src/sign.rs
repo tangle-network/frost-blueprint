@@ -255,9 +255,9 @@ mod e2e {
     use api::runtime_types::tangle_primitives::services::field::Field;
     use api::runtime_types::tangle_primitives::services::BlueprintServiceManager;
     use api::services::calls::types::call::Args;
+    use blueprint_test_utils::tangle::NodeConfig;
     use blueprint_test_utils::test_ext::*;
     use blueprint_test_utils::*;
-    use cargo_tangle::deploy::Opts;
     use frost_core::VerifyingKey;
     use gadget_sdk::error;
     use gadget_sdk::info;
@@ -277,38 +277,19 @@ mod e2e {
     #[allow(clippy::needless_return)]
     async fn signing() {
         setup_log();
-        let tangle = tangle::run().unwrap();
-        let base_path = std::env::current_dir().expect("Failed to get current directory");
-        let base_path = base_path
-            .canonicalize()
-            .expect("File could not be normalized");
-
-        let manifest_path = base_path.join("Cargo.toml");
-
-        let ws_port = tangle.ws_port();
-        let http_rpc_url = format!("http://127.0.0.1:{ws_port}");
-        let ws_rpc_url = format!("ws://127.0.0.1:{ws_port}");
-
-        let opts = Opts {
-            pkg_name: option_env!("CARGO_BIN_NAME").map(ToOwned::to_owned),
-            http_rpc_url,
-            ws_rpc_url,
-            manifest_path,
-            signer: None,
-            signer_evm: None,
-        };
 
         const N: usize = 3;
         const T: usize = N / 2 + 1;
         const CIPHERSUITE: &str = frost_ed25519::Ed25519Sha512::ID;
+        let node_config = NodeConfig::new(true);
 
         new_test_ext_blueprint_manager::<N, 1, _, _, _>(
             "",
-            opts,
             run_test_blueprint_manager,
+            node_config,
         )
         .await
-        .execute_with_async(move |client, handles, svcs| async move {
+        .execute_with_async(move |client, handles, svcs, opts| async move {
             // At this point, blueprint has been deployed, every node has registered
             // as an operator for the relevant services, and, all gadgets are running
 
@@ -326,11 +307,10 @@ mod e2e {
 
             let wallet = alloy_network::EthereumWallet::from(signer);
 
-            let ws_rpc_url = format!("ws://127.0.0.1:{ws_port}");
             let provider = alloy_provider::ProviderBuilder::new()
                 .with_recommended_fillers()
                 .wallet(wallet)
-                .on_ws(alloy_provider::WsConnect::new(ws_rpc_url))
+                .on_ws(alloy_provider::WsConnect::new(opts.ws_rpc_url.clone()))
                 .await
                 .unwrap();
 
@@ -344,16 +324,16 @@ mod e2e {
             let tnt_token = ERC20::new(tnt_token_address, provider.clone());
 
             // Send Some TNT to the Blueprint manager contract.
-            let tx = tnt_token
-                .transfer(blueprint_manager, value);
+            let tx = tnt_token.transfer(blueprint_manager, value);
             let receipt = tx.send().await.unwrap().get_receipt().await.unwrap();
-            assert!(receipt.status(), "Failed to fund the Blueprint manager contract with TNT");
-
+            assert!(
+                receipt.status(),
+                "Failed to fund the Blueprint manager contract with TNT"
+            );
 
             // Double check that the Blueprint manager contract has been funded with TNT.
             let balance = tnt_token.balanceOf(blueprint_manager).call().await.unwrap();
             assert_eq!(balance._0, value);
-
 
             let service = svcs.services.last().unwrap();
             let service_id = service.id;
@@ -377,6 +357,7 @@ mod e2e {
                 service_id,
                 crate::keygen::KEYGEN_JOB_ID,
                 job_args,
+                call_id,
             )
             .await
             {
@@ -420,6 +401,7 @@ mod e2e {
                 service_id,
                 crate::sign::SIGN_JOB_ID,
                 job_args,
+                call_id + 1,
             )
             .await
             {

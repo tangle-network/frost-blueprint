@@ -56,11 +56,10 @@ frost-secp256k1 = { version = "2.0", default-features = false, features = ["seri
 sled = { version = "0.34", default-features = false, optional = true }
 round-based = { version = "0.3.0", default-features = false, features = ["derive"] }
 
-
-[dependencies.gadget-sdk]
-version = "0.6.1"
-default-features = false
-features = ["getrandom"]
+# Gadget SDK
+# gadget-sdk = { version = "0.6.1", default-features = false, features = ["std"] }
+# gadget-sdk = { git = "https://github.com/tangle-network/gadget", default-features = false, features = ["std"] }
+gadget-sdk = { path = "../gadget/sdk", default-features = false, features = ["std"] }
 
 [dev-dependencies]
 tokio = { version = "^1", default-features = false, features = ["full", "rt-multi-thread"] }
@@ -74,7 +73,9 @@ proptest = { version = "1.5.0", default-features = false, features = ["std", "bi
 test-strategy = { version = "0.4.0", default-features = false }
 
 cargo-tangle = "0.3.2"
-blueprint-test-utils = { version = "0.2.1", default-features = false, features = ["std"] }
+# blueprint-test-utils = { version = "0.2.1", default-features = false, features = ["std"] }
+# blueprint-test-utils = { git = "https://github.com/tangle-network/gadget", default-features = false, features = ["std"] }
+blueprint-test-utils = { path = "../gadget/blueprint-test-utils", default-features = false, features = ["std"] }
 
 alloy-primitives = "0.8.14"
 alloy-provider = { version = "0.5.4", default-features = false, features = ["reqwest", "ws"] }
