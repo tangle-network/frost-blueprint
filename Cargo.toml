@@ -76,18 +76,19 @@ test-strategy = { version = "0.4.0", default-features = false }
 cargo-tangle = "0.3.2"
 blueprint-test-utils = { version = "0.2.1", default-features = false, features = ["std"] }
 
-alloy-primitives = "0.8.14"
-alloy-provider = { version = "0.5.4", default-features = false, features = ["reqwest", "ws"] }
-alloy-signer = { version = "0.7.3" }
-alloy-signer-local = { version = "0.5.4" }
-alloy-rpc-client = "0.5.4"
-alloy-network = { version = "0.5.4" }
-alloy-json-abi = "0.8.14"
-alloy-sol-types = "0.8.14"
-alloy-contract = { version = "0.5.4" }
+alloy-primitives = "0.8.12"
+alloy-provider = { version = "0.5", default-features = false, features = ["reqwest", "ws"] }
+alloy-signer = { version = "0.5" }
+alloy-signer-local = { version = "0.5" }
+alloy-rpc-client = "0.5"
+alloy-network = { version = "0.5" }
+alloy-json-abi = "0.8.12"
+alloy-sol-types = "0.8.12"
+alloy-contract = { version = "0.5" }
 
 [build-dependencies]
 blueprint-metadata = "0.2.0"
+blueprint-build-utils = { git = "https://github.com/webb-tools/gadget" }
 
 [features]
 default = ["std", "kv-sled"]
