@@ -2050,13 +2050,15 @@ dependencies = [
 [[package]]
 name = "blueprint-build-utils"
 version = "0.1.0"
+
+[[package]]
+name = "blueprint-build-utils"
+version = "0.1.0"
 source = "git+https://github.com/webb-tools/gadget#47ab03e73852128cea81c18c784334a99e395674"
 
 [[package]]
 name = "blueprint-manager"
 version = "0.2.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "58097d6e384d80aeb8591b73eac8f9767ad638d3e3f6030be84f8797e972bfc3"
 dependencies = [
  "async-trait",
  "auto_impl",
@@ -2064,8 +2066,8 @@ dependencies = [
  "color-eyre",
  "failure",
  "futures",
- "gadget-io",
- "gadget-sdk",
+ "gadget-io 0.0.5",
+ "gadget-sdk 0.6.1",
  "hex",
  "itertools 0.13.0",
  "libp2p",
@@ -2074,7 +2076,7 @@ dependencies = [
  "serde",
  "sha2 0.10.8",
  "sp-core",
- "tangle-subxt",
+ "tangle-subxt 0.7.0",
  "tokio",
  "toml",
  "tracing",
@@ -2089,7 +2091,7 @@ checksum = "c3301a5cb8c84c9b222006456469eb26ed5bb6ad3409b5614d3fc78920c19c89"
 dependencies = [
  "cargo_metadata",
  "fs2",
- "gadget-blueprint-proc-macro-core",
+ "gadget-blueprint-proc-macro-core 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "rustdoc-types",
  "serde",
  "serde_json",
@@ -2099,8 +2101,6 @@ dependencies = [
 [[package]]
 name = "blueprint-test-utils"
 version = "0.2.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0290d90d39fbbb204bc177811cb3ec5e9bb17fe56f94ae872e0c0081a671d4fe"
 dependencies = [
  "alloy-contract",
  "alloy-primitives",
@@ -2110,24 +2110,29 @@ dependencies = [
  "alloy-sol-types",
  "alloy-transport",
  "async-trait",
+ "blueprint-build-utils 0.1.0",
  "blueprint-manager",
- "cargo-tangle",
+ "cargo-tangle 0.3.2",
  "cargo_toml",
  "color-eyre",
+ "dirs",
  "futures",
- "gadget-io",
- "gadget-sdk",
+ "gadget-io 0.0.5",
+ "gadget-sdk 0.6.1",
  "lazy_static",
  "libp2p",
  "log",
  "parking_lot 0.12.3",
+ "reqwest 0.12.9",
  "serde",
+ "serde_json",
  "sp-core",
  "sp-io",
  "subxt",
  "tempfile",
  "testcontainers",
  "thiserror 1.0.69",
+ "tnt-core-bytecode",
  "tokio",
  "tracing",
  "url",
@@ -2354,6 +2359,35 @@ dependencies = [
 [[package]]
 name = "cargo-tangle"
 version = "0.3.2"
+dependencies = [
+ "alloy-json-abi",
+ "alloy-network",
+ "alloy-provider",
+ "alloy-rpc-types",
+ "alloy-signer-local",
+ "anyhow",
+ "cargo-generate",
+ "cargo_metadata",
+ "clap 4.5.23",
+ "clap-cargo",
+ "color-eyre",
+ "escargot",
+ "gadget-blueprint-proc-macro-core 0.3.0",
+ "gadget-sdk 0.6.1",
+ "hex",
+ "k256",
+ "serde_json",
+ "subxt",
+ "tangle-subxt 0.7.0",
+ "thiserror 1.0.69",
+ "tokio",
+ "tracing-subscriber 0.3.19",
+ "w3f-bls",
+]
+
+[[package]]
+name = "cargo-tangle"
+version = "0.3.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "adb3b4c2f8250aa109c4a591ceaab01abac96097e6f607c69d3a0c33b84470d9"
 dependencies = [
@@ -2369,13 +2403,13 @@ dependencies = [
  "clap-cargo",
  "color-eyre",
  "escargot",
- "gadget-blueprint-proc-macro-core",
- "gadget-sdk",
+ "gadget-blueprint-proc-macro-core 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "gadget-sdk 0.6.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "hex",
  "k256",
  "serde_json",
  "subxt",
- "tangle-subxt",
+ "tangle-subxt 0.7.1",
  "thiserror 1.0.69",
  "tokio",
  "tracing-subscriber 0.3.19",
@@ -4684,16 +4718,16 @@ dependencies = [
  "alloy-signer-local",
  "alloy-sol-types",
  "async-trait",
- "blueprint-build-utils",
+ "blueprint-build-utils 0.1.0 (git+https://github.com/webb-tools/gadget)",
  "blueprint-metadata",
  "blueprint-test-utils",
- "cargo-tangle",
+ "cargo-tangle 0.3.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "color-eyre",
  "displaydoc",
  "frost-core",
  "frost-ed25519",
  "frost-secp256k1",
- "gadget-sdk",
+ "gadget-sdk 0.6.1",
  "hex",
  "k256",
  "proptest",
@@ -5004,16 +5038,39 @@ dependencies = [
 [[package]]
 name = "gadget-blueprint-proc-macro"
 version = "0.5.0"
+dependencies = [
+ "gadget-blueprint-proc-macro-core 0.3.0",
+ "indexmap 2.7.0",
+ "itertools 0.13.0",
+ "parking_lot 0.12.3",
+ "proc-macro2",
+ "quote",
+ "serde_json",
+ "syn 2.0.90",
+]
+
+[[package]]
+name = "gadget-blueprint-proc-macro"
+version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "904d184eb53c1c09b1e97181900f617fd403176451814bbc20e16044c8e9f299"
 dependencies = [
- "gadget-blueprint-proc-macro-core",
+ "gadget-blueprint-proc-macro-core 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "indexmap 2.7.0",
  "itertools 0.13.0",
  "proc-macro2",
  "quote",
  "serde_json",
  "syn 2.0.90",
+]
+
+[[package]]
+name = "gadget-blueprint-proc-macro-core"
+version = "0.3.0"
+dependencies = [
+ "cid",
+ "ethereum-types",
+ "serde",
 ]
 
 [[package]]
@@ -5030,13 +5087,32 @@ dependencies = [
 [[package]]
 name = "gadget-blueprint-serde"
 version = "0.3.0"
+dependencies = [
+ "paste",
+ "serde",
+ "serde_bytes",
+ "tangle-subxt 0.7.0",
+]
+
+[[package]]
+name = "gadget-blueprint-serde"
+version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f38e36d5388bd569d2634ba677826c28ce6225ea4927e7004df70f769e2a00a7"
 dependencies = [
  "paste",
  "serde",
  "serde_bytes",
- "tangle-subxt",
+ "tangle-subxt 0.7.1",
+]
+
+[[package]]
+name = "gadget-context-derive"
+version = "0.3.0"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.90",
 ]
 
 [[package]]
@@ -5048,6 +5124,27 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn 2.0.90",
+]
+
+[[package]]
+name = "gadget-io"
+version = "0.0.5"
+dependencies = [
+ "cfg-if",
+ "clap 4.5.23",
+ "hex",
+ "multiaddr",
+ "parity-scale-codec",
+ "sc-keystore",
+ "scale-info",
+ "serde",
+ "sp-application-crypto",
+ "sp-core",
+ "sp-keystore",
+ "thiserror 1.0.69",
+ "tokio",
+ "tracing",
+ "url",
 ]
 
 [[package]]
@@ -5071,6 +5168,84 @@ dependencies = [
  "tokio",
  "tracing",
  "url",
+]
+
+[[package]]
+name = "gadget-sdk"
+version = "0.6.1"
+dependencies = [
+ "alloy-contract",
+ "alloy-json-abi",
+ "alloy-network",
+ "alloy-primitives",
+ "alloy-provider",
+ "alloy-rpc-types",
+ "alloy-signer",
+ "alloy-signer-local",
+ "alloy-sol-types",
+ "alloy-transport",
+ "alloy-transport-http",
+ "ark-bn254 0.4.0",
+ "ark-ec 0.4.2",
+ "ark-ff 0.5.0",
+ "ark-serialize 0.5.0",
+ "async-trait",
+ "auto_impl",
+ "backon",
+ "bincode",
+ "bollard",
+ "clap 4.5.23",
+ "color-eyre",
+ "dashmap",
+ "ed25519-zebra 4.0.3",
+ "eigensdk",
+ "elliptic-curve",
+ "failure",
+ "futures",
+ "gadget-blueprint-proc-macro 0.5.0",
+ "gadget-blueprint-proc-macro-core 0.3.0",
+ "gadget-blueprint-serde 0.3.0",
+ "gadget-context-derive 0.3.0",
+ "gadget-io 0.0.5",
+ "getrandom",
+ "hex",
+ "http-body-util",
+ "hyper 1.5.1",
+ "hyper-util",
+ "itertools 0.13.0",
+ "k256",
+ "lazy_static",
+ "libp2p",
+ "lock_api",
+ "log",
+ "lru-mem",
+ "nix 0.29.0",
+ "num-bigint 0.4.6",
+ "parking_lot 0.12.3",
+ "prometheus",
+ "rand",
+ "round-based",
+ "scale-info",
+ "schnorrkel",
+ "serde",
+ "serde_json",
+ "sp-core",
+ "sp-io",
+ "sqlx",
+ "subxt",
+ "subxt-core",
+ "subxt-signer",
+ "sysinfo",
+ "tangle-subxt 0.7.0",
+ "thiserror 1.0.69",
+ "tokio",
+ "tokio-retry",
+ "tokio-stream",
+ "tracing",
+ "tracing-subscriber 0.3.19",
+ "url",
+ "uuid 1.11.0",
+ "w3f-bls",
 ]
 
 [[package]]
@@ -5107,11 +5282,11 @@ dependencies = [
  "elliptic-curve",
  "failure",
  "futures",
- "gadget-blueprint-proc-macro",
- "gadget-blueprint-proc-macro-core",
- "gadget-blueprint-serde",
- "gadget-context-derive",
- "gadget-io",
+ "gadget-blueprint-proc-macro 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "gadget-blueprint-proc-macro-core 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "gadget-blueprint-serde 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "gadget-context-derive 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "gadget-io 0.0.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "getrandom",
  "hex",
  "http-body-util",
@@ -5141,7 +5316,7 @@ dependencies = [
  "subxt-core",
  "subxt-signer",
  "sysinfo",
- "tangle-subxt",
+ "tangle-subxt 0.7.1",
  "thiserror 1.0.69",
  "tokio",
  "tokio-retry",
@@ -12212,6 +12387,18 @@ dependencies = [
 
 [[package]]
 name = "tangle-subxt"
+version = "0.7.0"
+dependencies = [
+ "parity-scale-codec",
+ "scale-info",
+ "serde",
+ "subxt",
+ "subxt-core",
+ "subxt-signer",
+]
+
+[[package]]
+name = "tangle-subxt"
 version = "0.7.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "16af9ac9fa28eadfded616693fcb19a61055bcf5c42fda07a03b572996bb10e8"
@@ -12489,6 +12676,14 @@ name = "tinyvec_macros"
 version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1f3ccbac311fea05f86f61904b462b55fb3df8837a366dfc601a0161d0532f20"
+
+[[package]]
+name = "tnt-core-bytecode"
+version = "0.1.0"
+source = "git+https://github.com/tangle-network/tnt-core.git?branch=donovan/bytecode#b85cc4f149edf48de413184334dcea5514e064de"
+dependencies = [
+ "serde_json",
+]
 
 [[package]]
 name = "tokio"
