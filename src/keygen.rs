@@ -227,7 +227,8 @@ mod e2e {
 
     sol!(
         #[sol(rpc)]
-        "contracts/src/FrostBlueprint.sol",
+        FrostBlueprint,
+        "contracts/out/FrostBlueprint.sol/FrostBlueprint.json",
     );
 
     sol!(
