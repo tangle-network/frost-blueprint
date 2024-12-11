@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSE
-pragma solidity >=0.8.13;
+pragma solidity >=0.8.20;
 
 /**
  * @title IPaymentManager
@@ -41,7 +41,10 @@ interface IPaymentManager {
      * @param _token address Token address
      * @return uint256 Balance of the Operator for the token
      */
-    function operatorBalanceOf(address _operator, address _token) external view returns (uint256);
+    function operatorBalanceOf(
+        address _operator,
+        address _token
+    ) external view returns (uint256);
 
     /**
      * @dev Credit an Operator with tokens for their services.
@@ -49,7 +52,11 @@ interface IPaymentManager {
      * @param _token address Token address
      * @param _amount uint256 Amount of tokens to transfer
      */
-    function creditOperator(address _operator, address _token, uint256 _amount) external;
+    function creditOperator(
+        address _operator,
+        address _token,
+        uint256 _amount
+    ) external;
 
     /**
      * @dev Deposit tokens to the PaymentManager contract for a specific token as payment
@@ -72,7 +79,11 @@ interface IPaymentManager {
      * @param _amount uint256 Amount of tokens to withdraw
      * @param _recipient address Recipient address
      */
-    function withdrawAndTransfer(address _token, uint256 _amount, address _recipient) external;
+    function withdrawAndTransfer(
+        address _token,
+        uint256 _amount,
+        address _recipient
+    ) external;
 
     /**
      * @dev Get the total amount of tokens required for the service to be provided by the Operators
@@ -80,5 +91,8 @@ interface IPaymentManager {
      * @param _token address Token address for the payment (must be a supported token)
      * @return uint256 Total amount of tokens required for the service
      */
-    function calculateServiceCost(uint256 _serviceDuration, address _token) external view returns (uint256);
+    function calculateServiceCost(
+        uint256 _serviceDuration,
+        address _token
+    ) external view returns (uint256);
 }

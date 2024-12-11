@@ -30,6 +30,8 @@ pub struct FrostContext {
     /// The overreaching configuration for the service
     #[config]
     config: sdk::config::StdGadgetConfiguration,
+    #[call_id]
+    call_id: Option<u64>,
     /// The gossip handle for the network
     network_backend: Arc<NetworkMultiplexer>,
     /// The key-value store for the service
@@ -64,6 +66,7 @@ impl FrostContext {
                 Some(data_dir) => Arc::new(kv::SledKVStore::from_path(data_dir)?),
                 None => Arc::new(kv::SledKVStore::in_memory()?),
             },
+            call_id: None,
             config,
             account_id: my_ecdsa_key,
             network_backend: Arc::new(NetworkMultiplexer::new(gossip_handle)),

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSE
-pragma solidity >=0.8.13;
+pragma solidity >=0.8.20;
 
 import "tnt-core/BlueprintServiceManagerBase.sol";
 import "@openzeppelin/contracts/utils/structs/EnumerableMap.sol";
@@ -22,7 +22,8 @@ contract FrostBlueprint is BlueprintServiceManagerBase, PaymentManagerBase {
     /// @dev The IERC20 contract's address of TNT.
     ///
     /// TODO: move this into the TNT core contracts.
-    address public constant TNT_ERC20_ADDRESS = 0x0000000000000000000000000000000000000802;
+    address public constant TNT_ERC20_ADDRESS =
+        0x0000000000000000000000000000000000000802;
 
     /// @dev The Job Id for `keygen` job.
     uint8 public constant KEYGEN_JOB_ID = 0;
@@ -50,7 +51,10 @@ contract FrostBlueprint is BlueprintServiceManagerBase, PaymentManagerBase {
 
     // ================ EVENTS ========================
     event OperatorRegistered(address operator);
-    event ServiceOperatorAdded(uint64 indexed serviceId, address indexed operator);
+    event ServiceOperatorAdded(
+        uint64 indexed serviceId,
+        address indexed operator
+    );
 
     // ================ ERRORS ========================
     error OperatorNotRegistered(address operator);
@@ -76,75 +80,69 @@ contract FrostBlueprint is BlueprintServiceManagerBase, PaymentManagerBase {
         _signJobCost.set(TNT_ERC20_ADDRESS, 0.00001 ether);
     }
 
-    /**
-     * @dev Hook for service operator registration. Called when a service operator
-     * attempts to register with the blueprint.
-     * @param operator The operator's details.
-     * @param _registrationInputs Inputs required for registration.
-     */
-    function onRegister(bytes calldata operator, bytes calldata _registrationInputs)
-        public
-        payable
-        override
-        onlyFromRootChain
-    {
+    /// @inheritdoc BlueprintServiceManagerBase
+    function onRegister(
+        ServiceOperators.OperatorPreferences calldata operator,
+        bytes calldata _registrationInputs
+    ) public payable override onlyFromMaster {
         // Grant the operator the OPERATOR_ROLE.
-        grantRole(OPERATOR_ROLE, operatorAddressFromPublicKey(operator));
+        grantRole(
+            OPERATOR_ROLE,
+            operatorAddressFromPublicKey(operator.ecdsaPublicKey)
+        );
     }
 
-    /**
-     * @dev Hook for service instance requests. Called when a user requests a service
-     * instance from the blueprint.
-     * @param serviceId The ID of the requested service.
-     * @param operators The operators involved in the service.
-     * @param _requestInputs Inputs required for the service request.
-     */
-    function onRequest(uint64 serviceId, bytes[] calldata operators, bytes calldata _requestInputs)
-        public
-        payable
-        override
-        onlyFromRootChain
-    {
+    /// @inheritdoc BlueprintServiceManagerBase
+    function onRequest(
+        ServiceOperators.RequestParams calldata params
+    ) public payable override onlyFromMaster {
         // TODO: once we have access to the service owner, we can use it
         // to verify the service request and payment.
         // See: https://github.com/tangle-network/tangle/issues/817
-        uint256 operatorsCount = operators.length;
+        uint256 operatorsCount = params.operators.length;
         for (uint256 i = 0; i < operatorsCount; i++) {
-            _addServiceOperator(serviceId, operatorAddressFromPublicKey(operators[i]));
+            _addServiceOperator(
+                params.requestId,
+                operatorAddressFromPublicKey(params.operators[i].ecdsaPublicKey)
+            );
         }
     }
 
-    /**
-     * @dev Hook for handling job call results. Called when operators send the result
-     * of a job execution.
-     * @param serviceId The ID of the service related to the job.
-     * @param job The job identifier.
-     * @param jobCallId The unique ID for the job call.
-     * @param participant The participant (operator) sending the result.
-     * @param inputs Inputs used for the job execution.
-     * @param outputs Outputs resulting from the job execution.
-     */
+    /// @inheritdoc BlueprintServiceManagerBase
     function onJobResult(
         uint64 serviceId,
         uint8 job,
         uint64 jobCallId,
-        bytes calldata participant,
+        ServiceOperators.OperatorPreferences calldata operator,
         bytes calldata inputs,
         bytes calldata outputs
-    ) public payable virtual override onlyFromRootChain {
+    ) public payable virtual override onlyFromMaster {
         if (job == KEYGEN_JOB_ID) {
-            _handleKeygenJobResult(serviceId, jobCallId, operatorAddressFromPublicKey(participant), inputs, outputs);
+            _handleKeygenJobResult(
+                serviceId,
+                jobCallId,
+                operatorAddressFromPublicKey(operator.ecdsaPublicKey),
+                inputs,
+                outputs
+            );
         } else if (job == SIGN_JOB_ID) {
-            _handleSignJobResult(serviceId, jobCallId, operatorAddressFromPublicKey(participant), inputs, outputs);
+            _handleSignJobResult(
+                serviceId,
+                jobCallId,
+                operatorAddressFromPublicKey(operator.ecdsaPublicKey),
+                inputs,
+                outputs
+            );
         } else {
             revert UnsupportedJob(job);
         }
     }
 
-    /**
-     * @dev Implement the calculateServiceCost function.
-     */
-    function calculateServiceCost(uint256 serviceDuration, address token) external view override returns (uint256) {
+    /// @dev Implement the calculateServiceCost function.
+    function calculateServiceCost(
+        uint256 serviceDuration,
+        address token
+    ) external view override returns (uint256) {
         uint256 cost = 0;
         uint256 oneKeygenCall = _jobCost(KEYGEN_JOB_ID, token);
         uint256 oneSignCall = _jobCost(SIGN_JOB_ID, token);
@@ -158,7 +156,10 @@ contract FrostBlueprint is BlueprintServiceManagerBase, PaymentManagerBase {
      * @param token address The token address.
      * @return cost uint256 The cost of the job per sec in the given token.
      */
-    function jobCost(uint8 jobId, address token) external view returns (uint256) {
+    function jobCost(
+        uint8 jobId,
+        address token
+    ) external view returns (uint256) {
         return _jobCost(jobId, token);
     }
 
@@ -167,7 +168,9 @@ contract FrostBlueprint is BlueprintServiceManagerBase, PaymentManagerBase {
      * @param serviceId uint64 The service ID.
      * @return operators address[] The operators for the given service ID.
      */
-    function serviceOperators(uint64 serviceId) external view returns (address[] memory) {
+    function serviceOperators(
+        uint64 serviceId
+    ) external view returns (address[] memory) {
         return _serviceOperators[serviceId].values();
     }
 
@@ -177,7 +180,11 @@ contract FrostBlueprint is BlueprintServiceManagerBase, PaymentManagerBase {
      * @param token address The token address.
      * @param cost uint256 The new cost of the job per sec in the given token.
      */
-    function updateJobCost(uint8 jobId, address token, uint256 cost) external onlyOwner {
+    function updateJobCost(
+        uint8 jobId,
+        address token,
+        uint256 cost
+    ) external onlyOwner {
         if (jobId == KEYGEN_JOB_ID) {
             _keygenJobCost.set(token, cost);
         } else if (jobId == SIGN_JOB_ID) {
@@ -192,7 +199,9 @@ contract FrostBlueprint is BlueprintServiceManagerBase, PaymentManagerBase {
      * @param publicKey bytes The public key to convert.
      * @return operator address The operator address.
      */
-    function operatorAddressFromPublicKey(bytes calldata publicKey) public pure returns (address operator) {
+    function operatorAddressFromPublicKey(
+        bytes calldata publicKey
+    ) public pure returns (address operator) {
         return address(uint160(uint256(keccak256(publicKey))));
     }
 
@@ -236,7 +245,9 @@ contract FrostBlueprint is BlueprintServiceManagerBase, PaymentManagerBase {
         for (uint256 i = 0; i < _tokens.length; i++) {
             address token = _tokens[i];
             uint256 tokensPerSec = _jobCost(KEYGEN_JOB_ID, token);
-            uint256 amount = tokensPerSec * KEYGEN_JOB_DURATION_SECS * operatorsCount;
+            uint256 amount = tokensPerSec *
+                KEYGEN_JOB_DURATION_SECS *
+                operatorsCount;
             creditOperator(operator, token, amount);
         }
     }
@@ -272,7 +283,10 @@ contract FrostBlueprint is BlueprintServiceManagerBase, PaymentManagerBase {
      * @param token address The token address.
      * @return amount uint256 The amount of the token required for the job.
      */
-    function _jobCost(uint8 jobId, address token) internal view returns (uint256 amount) {
+    function _jobCost(
+        uint8 jobId,
+        address token
+    ) internal view returns (uint256 amount) {
         if (jobId == KEYGEN_JOB_ID) {
             return _keygenJobCost.get(token);
         } else if (jobId == SIGN_JOB_ID) {

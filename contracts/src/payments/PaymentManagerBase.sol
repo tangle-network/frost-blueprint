@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSE
-pragma solidity >=0.8.13;
+pragma solidity >=0.8.20;
 
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/access/extensions/AccessControlEnumerable.sol";
@@ -15,30 +15,55 @@ import "./IPaymentManager.sol";
  * @title PaymentManagerBase
  * @dev Base contract implementing the IPaymentManager interface with additional functionalities.
  */
-abstract contract PaymentManagerBase is IPaymentManager, Ownable, AccessControlEnumerable, ReentrancyGuard {
+abstract contract PaymentManagerBase is
+    IPaymentManager,
+    Ownable,
+    AccessControlEnumerable,
+    ReentrancyGuard
+{
     using SafeERC20 for IERC20;
     using EnumerableSet for EnumerableSet.AddressSet;
 
     // Roles
     bytes32 public constant OPERATOR_ROLE = keccak256("OPERATOR_ROLE");
-    bytes32 public constant SERVICE_OWNER_ROLE = keccak256("SERVICE_OWNER_ROLE");
+    bytes32 public constant SERVICE_OWNER_ROLE =
+        keccak256("SERVICE_OWNER_ROLE");
     bytes32 public constant ROOT_CHAIN_ROLE = keccak256("ROOT_CHAIN_ROLE");
 
     EnumerableSet.AddressSet private supportedTokensSet;
 
     // Operator balances: operator => token => balance
-    mapping(address => mapping(address => uint256)) private operatorBalancesMapping;
+    mapping(address => mapping(address => uint256))
+        private operatorBalancesMapping;
 
     // Service Owners balances: serviceOwner => token => balance
-    mapping(address => mapping(address => uint256)) private serviceOwnerBalancesMapping;
+    mapping(address => mapping(address => uint256))
+        private serviceOwnerBalancesMapping;
 
     // Events
     event TokensAdded(address[] tokens);
     event TokensRemoved(address[] tokens);
-    event Deposited(address indexed user, address indexed token, uint256 amount);
-    event Withdrawn(address indexed user, address indexed token, uint256 amount);
-    event WithdrawnTo(address indexed user, address indexed token, uint256 amount, address indexed recipient);
-    event OperatorCredited(address indexed operator, address indexed token, uint256 amount);
+    event Deposited(
+        address indexed user,
+        address indexed token,
+        uint256 amount
+    );
+    event Withdrawn(
+        address indexed user,
+        address indexed token,
+        uint256 amount
+    );
+    event WithdrawnTo(
+        address indexed user,
+        address indexed token,
+        uint256 amount,
+        address indexed recipient
+    );
+    event OperatorCredited(
+        address indexed operator,
+        address indexed token,
+        uint256 amount
+    );
 
     // Custom Errors
     error TokenAlreadySupported(address token);
@@ -99,7 +124,9 @@ abstract contract PaymentManagerBase is IPaymentManager, Ownable, AccessControlE
      * @dev Add new tokens to the list of supported tokens.
      * @param _tokens List of token addresses to add.
      */
-    function addSupportedTokens(address[] memory _tokens) public override onlyOwner {
+    function addSupportedTokens(
+        address[] memory _tokens
+    ) public override onlyOwner {
         uint256 length = _tokens.length;
         for (uint256 i = 0; i < length; i++) {
             address token = _tokens[i];
@@ -115,7 +142,9 @@ abstract contract PaymentManagerBase is IPaymentManager, Ownable, AccessControlE
      * @dev Remove tokens from the list of supported tokens.
      * @param _tokens List of token addresses to remove.
      */
-    function removeSupportedTokens(address[] memory _tokens) public override onlyOwner {
+    function removeSupportedTokens(
+        address[] memory _tokens
+    ) public override onlyOwner {
         uint256 length = _tokens.length;
         for (uint256 i = 0; i < length; i++) {
             address token = _tokens[i];
@@ -146,7 +175,10 @@ abstract contract PaymentManagerBase is IPaymentManager, Ownable, AccessControlE
      * @param _token Token address.
      * @return Balance of the operator for the token.
      */
-    function operatorBalanceOf(address _operator, address _token) public view override returns (uint256) {
+    function operatorBalanceOf(
+        address _operator,
+        address _token
+    ) public view override returns (uint256) {
         return operatorBalancesMapping[_operator][_token];
     }
 
@@ -156,12 +188,11 @@ abstract contract PaymentManagerBase is IPaymentManager, Ownable, AccessControlE
      * @param _token Token address.
      * @param _amount Amount of tokens to credit.
      */
-    function creditOperator(address _operator, address _token, uint256 _amount)
-        public
-        override
-        onlyRootChain
-        nonReentrant
-    {
+    function creditOperator(
+        address _operator,
+        address _token,
+        uint256 _amount
+    ) public override onlyRootChain nonReentrant {
         if (_amount == 0) {
             revert InvalidAmount();
         }
@@ -177,7 +208,10 @@ abstract contract PaymentManagerBase is IPaymentManager, Ownable, AccessControlE
             operatorBalancesMapping[_operator][_token] += _amount;
         } else {
             uint256 contractBalance = IERC20(_token).balanceOf(address(this));
-            if (contractBalance < _amount + operatorBalancesMapping[_operator][_token]) {
+            if (
+                contractBalance <
+                _amount + operatorBalancesMapping[_operator][_token]
+            ) {
                 revert InsufficientBalance(_token);
             }
             operatorBalancesMapping[_operator][_token] += _amount;
@@ -191,7 +225,10 @@ abstract contract PaymentManagerBase is IPaymentManager, Ownable, AccessControlE
      * @param _token Token address (address(0) for ETH).
      * @param _amount Amount to deposit.
      */
-    function deposit(address _token, uint256 _amount) public payable override nonReentrant {
+    function deposit(
+        address _token,
+        uint256 _amount
+    ) public payable override nonReentrant {
         if (_amount == 0) {
             revert InvalidAmount();
         }
@@ -216,7 +253,10 @@ abstract contract PaymentManagerBase is IPaymentManager, Ownable, AccessControlE
      * @param _token Token address (address(0) for ETH).
      * @param _amount Amount to withdraw.
      */
-    function withdraw(address _token, uint256 _amount) public override nonReentrant onlyOperator {
+    function withdraw(
+        address _token,
+        uint256 _amount
+    ) public override nonReentrant onlyOperator {
         _withdraw(_token, _amount, _msgSender());
     }
 
@@ -226,12 +266,11 @@ abstract contract PaymentManagerBase is IPaymentManager, Ownable, AccessControlE
      * @param _amount Amount to withdraw.
      * @param _recipient Recipient address.
      */
-    function withdrawAndTransfer(address _token, uint256 _amount, address _recipient)
-        public
-        override
-        nonReentrant
-        onlyOperator
-    {
+    function withdrawAndTransfer(
+        address _token,
+        uint256 _amount,
+        address _recipient
+    ) public override nonReentrant onlyOperator {
         if (_recipient == address(0)) {
             revert InvalidRecipient(_recipient);
         }
@@ -244,7 +283,11 @@ abstract contract PaymentManagerBase is IPaymentManager, Ownable, AccessControlE
      * @param _amount Amount to withdraw.
      * @param _recipient Recipient address.
      */
-    function _withdraw(address _token, uint256 _amount, address _recipient) internal {
+    function _withdraw(
+        address _token,
+        uint256 _amount,
+        address _recipient
+    ) internal {
         if (_amount == 0) {
             revert InvalidAmount();
         }
@@ -291,7 +334,11 @@ abstract contract PaymentManagerBase is IPaymentManager, Ownable, AccessControlE
      * @param _amount Amount to withdraw.
      * @param _recipient Recipient address.
      */
-    function _withdrawERC20(address _token, uint256 _amount, address _recipient) internal {
+    function _withdrawERC20(
+        address _token,
+        uint256 _amount,
+        address _recipient
+    ) internal {
         if (_amount == 0) {
             revert InvalidAmount();
         }
@@ -337,10 +384,8 @@ abstract contract PaymentManagerBase is IPaymentManager, Ownable, AccessControlE
      * @param _token Token address.
      * @return Total cost of the service.
      */
-    function calculateServiceCost(uint256 _serviceDuration, address _token)
-        external
-        view
-        virtual
-        override
-        returns (uint256);
+    function calculateServiceCost(
+        uint256 _serviceDuration,
+        address _token
+    ) external view virtual override returns (uint256);
 }
