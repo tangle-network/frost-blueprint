@@ -76,7 +76,7 @@ test-strategy = { version = "0.4.0", default-features = false }
 cargo-tangle = "0.3.2"
 blueprint-test-utils = { version = "0.2.1", default-features = false, features = ["std"] }
 
-alloy-primitives = "0.8.14"
+alloy-primitives = "0.8.16"
 alloy-provider = { version = "0.5.4", default-features = false, features = ["reqwest", "ws"] }
 alloy-signer = { version = "0.7.3" }
 alloy-signer-local = { version = "0.5.4" }
