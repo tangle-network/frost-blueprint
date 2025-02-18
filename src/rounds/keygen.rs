@@ -196,7 +196,7 @@ mod tests {
     use proptest::prelude::*;
     use rand::rngs::StdRng;
     use rand::SeedableRng;
-    use round_based::simulation::Simulation;
+    use round_based::sim::Simulation;
     use test_strategy::proptest;
     use test_strategy::Arbitrary;
 
@@ -234,11 +234,9 @@ mod tests {
         prop_assume!(frost_core::keys::validate_num_of_signers::<C>(t, n).is_ok());
 
         eprintln!("Running a {} {t}-out-of-{n} Keygen", C::ID);
-        let mut simulation = Simulation::<Msg<C>>::new();
-        let mut tasks = vec![];
+        let mut simulation = Simulation::<_, Msg<C>>::empty();
         for i in 0..n {
-            let party = simulation.add_party();
-            let output = tokio::spawn(async move {
+            simulation.add_async_party(|party| async move {
                 let rng = &mut StdRng::seed_from_u64(u64::from(i + 1));
                 let mut tracer = PerfProfiler::new();
                 let output = run(rng, t, n, i, party, Some(tracer.borrow_mut())).await?;
@@ -246,18 +244,18 @@ mod tests {
                 eprintln!("Party {} report: {}\n", i, report);
                 Result::<_, Error<C>>::Ok(output)
             });
-            tasks.push(output);
         }
 
-        let mut outputs = Vec::with_capacity(tasks.len());
+        let mut outputs = Vec::with_capacity(n as usize);
+        let tasks = simulation.run()?;
         for task in tasks {
-            outputs.push(task.await.unwrap());
+            outputs.push(task);
         }
         let outputs = outputs.into_iter().collect::<Result<Vec<_>, _>>()?;
-        // Assert that all parties outputed the same public key
-        let (_, pubkey_pkg) = &outputs[0];
+        // Assert that all parties output the same public key
+        let (pubkey_pkg, _) = &outputs[0];
         for (_, other_pubkey_pkg) in outputs.iter().skip(1) {
-            prop_assert_eq!(pubkey_pkg, other_pubkey_pkg);
+            prop_assert_eq!(pubkey_pkg.verifying_key(), other_pubkey_pkg.verifying_key());
         }
 
         Ok(())

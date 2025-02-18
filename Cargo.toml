@@ -55,15 +55,15 @@ frost-ed25519 = { version = "2.1", default-features = false, features = ["serial
 frost-secp256k1 = { version = "2.1", default-features = false, features = ["serialization", "cheater-detection"] }
 
 sled = { version = "0.34", default-features = false, optional = true }
-round-based = { version = "0.3.0", default-features = false, features = ["derive"] }
+round-based = { version = "0.4.1", default-features = false, features = ["derive"] }
 
-blueprint-sdk = { git = "https://github.com/tangle-network/gadget.git", features = [
+blueprint-sdk = { path = "../gadget/crates/sdk", features = [
     "macros",
     "tangle",
     "networking",
     "local-store",
     "networking-sp-core-ecdsa",
-], branch = "dynamic-test-executor" }
+] }
 
 
 [dev-dependencies]
@@ -73,20 +73,14 @@ frost-core = { version = "2.0", default-features = false, features = [
     "cheater-detection",
     "internals",
 ] }
-round-based = { version = "0.3.0", default-features = false, features = ["derive", "dev"] }
+round-based = { version = "0.4.1", default-features = false, features = ["derive", "sim", "sim-async"] }
 proptest = { version = "1.5.0", default-features = false, features = ["std", "bit-set", "fork", "timeout"] }
 test-strategy = { version = "0.4.0", default-features = false }
 
-blueprint-sdk = { git = "https://github.com/tangle-network/gadget.git", features = [
-    "std",
-    "tangle",
-    "testing",
-], branch = "dynamic-test-executor" }
+blueprint-sdk = { path = "../gadget/crates/sdk", features = ["std", "tangle", "testing"] }
 
 [build-dependencies]
-blueprint-sdk = { git = "https://github.com/tangle-network/gadget.git", features = [
-    "build",
-], branch = "dynamic-test-executor" }
+blueprint-sdk = { path = "../gadget/crates/sdk", features = ["build"] }
 
 [features]
 default = ["std", "kv-sled"]

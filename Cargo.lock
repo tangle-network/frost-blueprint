@@ -2313,7 +2313,6 @@ dependencies = [
 [[package]]
 name = "blueprint-build-utils"
 version = "0.1.0"
-source = "git+https://github.com/tangle-network/gadget.git#8866dddc9a4f4240fc3f51762895f011f87ed549"
 dependencies = [
  "gadget-std",
 ]
@@ -2321,7 +2320,6 @@ dependencies = [
 [[package]]
 name = "blueprint-metadata"
 version = "0.2.1"
-source = "git+https://github.com/tangle-network/gadget.git#8866dddc9a4f4240fc3f51762895f011f87ed549"
 dependencies = [
  "cargo_metadata 0.18.1",
  "fs2",
@@ -2337,7 +2335,6 @@ dependencies = [
 [[package]]
 name = "blueprint-sdk"
 version = "0.1.0"
-source = "git+https://github.com/tangle-network/gadget.git#8866dddc9a4f4240fc3f51762895f011f87ed549"
 dependencies = [
  "blueprint-build-utils",
  "blueprint-metadata",
@@ -2825,7 +2822,6 @@ dependencies = [
 [[package]]
 name = "cargo-tangle"
 version = "0.1.0"
-source = "git+https://github.com/tangle-network/gadget.git#8866dddc9a4f4240fc3f51762895f011f87ed549"
 dependencies = [
  "alloy-json-abi",
  "alloy-network",
@@ -5359,6 +5355,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "fastrlp"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ce8dba4714ef14b8274c371879b175aa55b16b30f269663f19d576f380018dc4"
+dependencies = [
+ "arrayvec 0.7.6",
+ "auto_impl",
+ "bytes",
+]
+
+[[package]]
 name = "ff"
 version = "0.13.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -6077,7 +6084,6 @@ dependencies = [
 [[package]]
 name = "gadget-blueprint-proc-macro"
 version = "0.5.1"
-source = "git+https://github.com/tangle-network/gadget.git#8866dddc9a4f4240fc3f51762895f011f87ed549"
 dependencies = [
  "gadget-blueprint-proc-macro-core",
  "gadget-std",
@@ -6092,7 +6098,6 @@ dependencies = [
 [[package]]
 name = "gadget-blueprint-proc-macro-core"
 version = "0.3.1"
-source = "git+https://github.com/tangle-network/gadget.git#8866dddc9a4f4240fc3f51762895f011f87ed549"
 dependencies = [
  "cid",
  "ethereum-types",
@@ -6103,7 +6108,6 @@ dependencies = [
 [[package]]
 name = "gadget-blueprint-serde"
 version = "0.3.1"
-source = "git+https://github.com/tangle-network/gadget.git#8866dddc9a4f4240fc3f51762895f011f87ed549"
 dependencies = [
  "paste",
  "serde",
@@ -6114,7 +6118,6 @@ dependencies = [
 [[package]]
 name = "gadget-client-core"
 version = "0.1.0"
-source = "git+https://github.com/tangle-network/gadget.git#8866dddc9a4f4240fc3f51762895f011f87ed549"
 dependencies = [
  "async-trait",
  "auto_impl",
@@ -6125,7 +6128,6 @@ dependencies = [
 [[package]]
 name = "gadget-client-eigenlayer"
 version = "0.1.0"
-source = "git+https://github.com/tangle-network/gadget.git#8866dddc9a4f4240fc3f51762895f011f87ed549"
 dependencies = [
  "alloy-contract",
  "alloy-network",
@@ -6148,7 +6150,6 @@ dependencies = [
 [[package]]
 name = "gadget-client-evm"
 version = "0.1.0"
-source = "git+https://github.com/tangle-network/gadget.git#8866dddc9a4f4240fc3f51762895f011f87ed549"
 dependencies = [
  "alloy-consensus",
  "alloy-json-rpc",
@@ -6178,7 +6179,6 @@ dependencies = [
 [[package]]
 name = "gadget-client-networking"
 version = "0.1.0"
-source = "git+https://github.com/tangle-network/gadget.git#8866dddc9a4f4240fc3f51762895f011f87ed549"
 dependencies = [
  "gadget-client-core",
  "gadget-config",
@@ -6195,7 +6195,6 @@ dependencies = [
 [[package]]
 name = "gadget-client-tangle"
 version = "0.1.0"
-source = "git+https://github.com/tangle-network/gadget.git#8866dddc9a4f4240fc3f51762895f011f87ed549"
 dependencies = [
  "async-trait",
  "auto_impl",
@@ -6216,7 +6215,6 @@ dependencies = [
 [[package]]
 name = "gadget-clients"
 version = "0.1.0"
-source = "git+https://github.com/tangle-network/gadget.git#8866dddc9a4f4240fc3f51762895f011f87ed549"
 dependencies = [
  "gadget-client-core",
  "gadget-client-eigenlayer",
@@ -6230,7 +6228,6 @@ dependencies = [
 [[package]]
 name = "gadget-config"
 version = "0.1.0"
-source = "git+https://github.com/tangle-network/gadget.git#8866dddc9a4f4240fc3f51762895f011f87ed549"
 dependencies = [
  "alloy-primitives 0.8.21",
  "clap",
@@ -6248,7 +6245,6 @@ dependencies = [
 [[package]]
 name = "gadget-context-derive"
 version = "0.3.1"
-source = "git+https://github.com/tangle-network/gadget.git#8866dddc9a4f4240fc3f51762895f011f87ed549"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -6258,7 +6254,6 @@ dependencies = [
 [[package]]
 name = "gadget-contexts"
 version = "0.1.0"
-source = "git+https://github.com/tangle-network/gadget.git#8866dddc9a4f4240fc3f51762895f011f87ed549"
 dependencies = [
  "async-trait",
  "gadget-clients",
@@ -6273,7 +6268,6 @@ dependencies = [
 [[package]]
 name = "gadget-core-testing-utils"
 version = "0.1.0"
-source = "git+https://github.com/tangle-network/gadget.git#8866dddc9a4f4240fc3f51762895f011f87ed549"
 dependencies = [
  "async-trait",
  "cargo_toml",
@@ -6295,7 +6289,6 @@ dependencies = [
 [[package]]
 name = "gadget-crypto"
 version = "0.1.0"
-source = "git+https://github.com/tangle-network/gadget.git#8866dddc9a4f4240fc3f51762895f011f87ed549"
 dependencies = [
  "gadget-crypto-bls",
  "gadget-crypto-bn254",
@@ -6312,7 +6305,6 @@ dependencies = [
 [[package]]
 name = "gadget-crypto-bls"
 version = "0.1.0"
-source = "git+https://github.com/tangle-network/gadget.git#8866dddc9a4f4240fc3f51762895f011f87ed549"
 dependencies = [
  "ark-serialize 0.5.0",
  "gadget-crypto-core",
@@ -6328,7 +6320,6 @@ dependencies = [
 [[package]]
 name = "gadget-crypto-bn254"
 version = "0.1.0"
-source = "git+https://github.com/tangle-network/gadget.git#8866dddc9a4f4240fc3f51762895f011f87ed549"
 dependencies = [
  "ark-bn254",
  "ark-ec 0.5.0",
@@ -6348,7 +6339,6 @@ dependencies = [
 [[package]]
 name = "gadget-crypto-core"
 version = "0.1.0"
-source = "git+https://github.com/tangle-network/gadget.git#8866dddc9a4f4240fc3f51762895f011f87ed549"
 dependencies = [
  "clap",
  "gadget-std",
@@ -6359,7 +6349,6 @@ dependencies = [
 [[package]]
 name = "gadget-crypto-ed25519"
 version = "0.1.0"
-source = "git+https://github.com/tangle-network/gadget.git#8866dddc9a4f4240fc3f51762895f011f87ed549"
 dependencies = [
  "ed25519-zebra",
  "gadget-crypto-core",
@@ -6373,7 +6362,6 @@ dependencies = [
 [[package]]
 name = "gadget-crypto-hashing"
 version = "0.1.0"
-source = "git+https://github.com/tangle-network/gadget.git#8866dddc9a4f4240fc3f51762895f011f87ed549"
 dependencies = [
  "blake3",
  "gadget-std",
@@ -6384,7 +6372,6 @@ dependencies = [
 [[package]]
 name = "gadget-crypto-k256"
 version = "0.1.0"
-source = "git+https://github.com/tangle-network/gadget.git#8866dddc9a4f4240fc3f51762895f011f87ed549"
 dependencies = [
  "alloy-primitives 0.8.21",
  "alloy-signer-local",
@@ -6400,7 +6387,6 @@ dependencies = [
 [[package]]
 name = "gadget-crypto-sp-core"
 version = "0.1.0"
-source = "git+https://github.com/tangle-network/gadget.git#8866dddc9a4f4240fc3f51762895f011f87ed549"
 dependencies = [
  "gadget-crypto-core",
  "gadget-std",
@@ -6415,7 +6401,6 @@ dependencies = [
 [[package]]
 name = "gadget-crypto-sr25519"
 version = "0.1.0"
-source = "git+https://github.com/tangle-network/gadget.git#8866dddc9a4f4240fc3f51762895f011f87ed549"
 dependencies = [
  "gadget-crypto-core",
  "gadget-std",
@@ -6429,7 +6414,6 @@ dependencies = [
 [[package]]
 name = "gadget-crypto-tangle-pair-signer"
 version = "0.1.0"
-source = "git+https://github.com/tangle-network/gadget.git#8866dddc9a4f4240fc3f51762895f011f87ed549"
 dependencies = [
  "alloy-primitives 0.8.21",
  "alloy-signer-local",
@@ -6447,7 +6431,6 @@ dependencies = [
 [[package]]
 name = "gadget-event-listeners"
 version = "0.1.0"
-source = "git+https://github.com/tangle-network/gadget.git#8866dddc9a4f4240fc3f51762895f011f87ed549"
 dependencies = [
  "gadget-event-listeners-core",
  "gadget-event-listeners-cronjob",
@@ -6459,9 +6442,9 @@ dependencies = [
 [[package]]
 name = "gadget-event-listeners-core"
 version = "0.1.0"
-source = "git+https://github.com/tangle-network/gadget.git#8866dddc9a4f4240fc3f51762895f011f87ed549"
 dependencies = [
  "async-trait",
+ "auto_impl",
  "gadget-logging",
  "gadget-std",
  "thiserror 2.0.11",
@@ -6471,7 +6454,6 @@ dependencies = [
 [[package]]
 name = "gadget-event-listeners-cronjob"
 version = "0.1.0"
-source = "git+https://github.com/tangle-network/gadget.git#8866dddc9a4f4240fc3f51762895f011f87ed549"
 dependencies = [
  "async-trait",
  "gadget-event-listeners-core",
@@ -6485,7 +6467,6 @@ dependencies = [
 [[package]]
 name = "gadget-event-listeners-evm"
 version = "0.1.0"
-source = "git+https://github.com/tangle-network/gadget.git#8866dddc9a4f4240fc3f51762895f011f87ed549"
 dependencies = [
  "alloy-contract",
  "alloy-network",
@@ -6506,7 +6487,6 @@ dependencies = [
 [[package]]
 name = "gadget-event-listeners-tangle"
 version = "0.1.0"
-source = "git+https://github.com/tangle-network/gadget.git#8866dddc9a4f4240fc3f51762895f011f87ed549"
 dependencies = [
  "async-trait",
  "gadget-blueprint-serde",
@@ -6528,7 +6508,6 @@ dependencies = [
 [[package]]
 name = "gadget-keystore"
 version = "0.1.0"
-source = "git+https://github.com/tangle-network/gadget.git#8866dddc9a4f4240fc3f51762895f011f87ed549"
 dependencies = [
  "alloy-network",
  "alloy-primitives 0.8.21",
@@ -6567,7 +6546,6 @@ dependencies = [
 [[package]]
 name = "gadget-logging"
 version = "0.1.0"
-source = "git+https://github.com/tangle-network/gadget.git#8866dddc9a4f4240fc3f51762895f011f87ed549"
 dependencies = [
  "tracing",
  "tracing-subscriber 0.3.19",
@@ -6576,7 +6554,6 @@ dependencies = [
 [[package]]
 name = "gadget-macros"
 version = "0.1.0"
-source = "git+https://github.com/tangle-network/gadget.git#8866dddc9a4f4240fc3f51762895f011f87ed549"
 dependencies = [
  "async-trait",
  "clap",
@@ -6600,7 +6577,6 @@ dependencies = [
 [[package]]
 name = "gadget-networking"
 version = "0.1.0"
-source = "git+https://github.com/tangle-network/gadget.git#8866dddc9a4f4240fc3f51762895f011f87ed549"
 dependencies = [
  "async-trait",
  "auto_impl",
@@ -6627,7 +6603,6 @@ dependencies = [
 [[package]]
 name = "gadget-rpc-calls"
 version = "0.1.0"
-source = "git+https://github.com/tangle-network/gadget.git#8866dddc9a4f4240fc3f51762895f011f87ed549"
 dependencies = [
  "gadget-logging",
  "metrics",
@@ -6636,7 +6611,6 @@ dependencies = [
 [[package]]
 name = "gadget-runner-core"
 version = "0.1.0"
-source = "git+https://github.com/tangle-network/gadget.git#8866dddc9a4f4240fc3f51762895f011f87ed549"
 dependencies = [
  "async-trait",
  "futures",
@@ -6651,7 +6625,6 @@ dependencies = [
 [[package]]
 name = "gadget-runner-eigenlayer"
 version = "0.1.0"
-source = "git+https://github.com/tangle-network/gadget.git#8866dddc9a4f4240fc3f51762895f011f87ed549"
 dependencies = [
  "alloy-contract",
  "alloy-network",
@@ -6675,7 +6648,6 @@ dependencies = [
 [[package]]
 name = "gadget-runner-tangle"
 version = "0.1.0"
-source = "git+https://github.com/tangle-network/gadget.git#8866dddc9a4f4240fc3f51762895f011f87ed549"
 dependencies = [
  "async-trait",
  "futures",
@@ -6696,7 +6668,6 @@ dependencies = [
 [[package]]
 name = "gadget-runners"
 version = "0.1.0"
-source = "git+https://github.com/tangle-network/gadget.git#8866dddc9a4f4240fc3f51762895f011f87ed549"
 dependencies = [
  "gadget-runner-core",
  "gadget-runner-eigenlayer",
@@ -6706,7 +6677,6 @@ dependencies = [
 [[package]]
 name = "gadget-std"
 version = "0.1.0"
-source = "git+https://github.com/tangle-network/gadget.git#8866dddc9a4f4240fc3f51762895f011f87ed549"
 dependencies = [
  "async-trait",
  "colored",
@@ -6719,7 +6689,6 @@ dependencies = [
 [[package]]
 name = "gadget-store-local-database"
 version = "0.1.0"
-source = "git+https://github.com/tangle-network/gadget.git#8866dddc9a4f4240fc3f51762895f011f87ed549"
 dependencies = [
  "gadget-std",
  "serde",
@@ -6729,7 +6698,6 @@ dependencies = [
 [[package]]
 name = "gadget-stores"
 version = "0.1.0"
-source = "git+https://github.com/tangle-network/gadget.git#8866dddc9a4f4240fc3f51762895f011f87ed549"
 dependencies = [
  "gadget-store-local-database",
 ]
@@ -6737,7 +6705,6 @@ dependencies = [
 [[package]]
 name = "gadget-tangle-testing-utils"
 version = "0.1.0"
-source = "git+https://github.com/tangle-network/gadget.git#8866dddc9a4f4240fc3f51762895f011f87ed549"
 dependencies = [
  "alloy-json-rpc",
  "alloy-primitives 0.8.21",
@@ -6749,6 +6716,7 @@ dependencies = [
  "async-trait",
  "cargo-tangle",
  "dirs 5.0.1",
+ "futures",
  "gadget-blueprint-serde",
  "gadget-client-tangle",
  "gadget-clients",
@@ -6760,6 +6728,7 @@ dependencies = [
  "gadget-keystore",
  "gadget-logging",
  "gadget-macros",
+ "gadget-networking",
  "gadget-runners",
  "gadget-std",
  "reqwest 0.12.12",
@@ -6776,7 +6745,6 @@ dependencies = [
 [[package]]
 name = "gadget-testing-utils"
 version = "0.1.0"
-source = "git+https://github.com/tangle-network/gadget.git#8866dddc9a4f4240fc3f51762895f011f87ed549"
 dependencies = [
  "gadget-core-testing-utils",
  "gadget-tangle-testing-utils",
@@ -6785,7 +6753,6 @@ dependencies = [
 [[package]]
 name = "gadget-utils"
 version = "0.1.0"
-source = "git+https://github.com/tangle-network/gadget.git#8866dddc9a4f4240fc3f51762895f011f87ed549"
 dependencies = [
  "gadget-utils-eigenlayer",
  "gadget-utils-evm",
@@ -6795,7 +6762,6 @@ dependencies = [
 [[package]]
 name = "gadget-utils-eigenlayer"
 version = "0.1.0"
-source = "git+https://github.com/tangle-network/gadget.git#8866dddc9a4f4240fc3f51762895f011f87ed549"
 dependencies = [
  "alloy-contract",
  "alloy-network",
@@ -6810,7 +6776,6 @@ dependencies = [
 [[package]]
 name = "gadget-utils-evm"
 version = "0.1.0"
-source = "git+https://github.com/tangle-network/gadget.git#8866dddc9a4f4240fc3f51762895f011f87ed549"
 dependencies = [
  "alloy-network",
  "alloy-primitives 0.8.21",
@@ -6825,7 +6790,6 @@ dependencies = [
 [[package]]
 name = "gadget-utils-tangle"
 version = "0.1.0"
-source = "git+https://github.com/tangle-network/gadget.git#8866dddc9a4f4240fc3f51762895f011f87ed549"
 dependencies = [
  "async-trait",
  "gadget-logging",
@@ -9713,6 +9677,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "071dfc062690e90b734c0b2273ce72ad0ffa95f0c74596bc250dcfd960262841"
 dependencies = [
  "autocfg",
+ "libm",
 ]
 
 [[package]]
@@ -13819,15 +13784,14 @@ dependencies = [
 
 [[package]]
 name = "round-based"
-version = "0.3.2"
+version = "0.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "81564866f5617d497753563151d8beb80d61e925e904d94b7e8a202b721e931e"
+checksum = "da76edf50de0a9d6911fc79261bb04cc9f3f3a375e0201799f5edf58499af341"
 dependencies = [
- "displaydoc",
  "futures-util",
  "phantom-type",
  "round-based-derive",
- "thiserror 1.0.69",
+ "thiserror 2.0.11",
  "tokio",
  "tokio-stream",
  "tracing",
@@ -13864,16 +13828,19 @@ dependencies = [
 
 [[package]]
 name = "ruint"
-version = "1.12.3"
+version = "1.13.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2c3cc4c2511671f327125da14133d0c5c5d137f006a1017a16f557bc85b16286"
+checksum = "04836b804abe06b773833991e51fddd0b88c68975d7ac67331f73aa705a500ab"
 dependencies = [
  "alloy-rlp",
  "ark-ff 0.3.0",
  "ark-ff 0.4.2",
  "bytes",
- "fastrlp",
+ "fastrlp 0.3.1",
+ "fastrlp 0.4.0",
+ "hex",
  "num-bigint",
+ "num-integer",
  "num-traits",
  "parity-scale-codec",
  "primitive-types 0.12.2",
@@ -16880,8 +16847,6 @@ checksum = "7b2093cf4c8eb1e67749a6762251bc9cd836b6fc171623bd0a9d324d37af2417"
 [[package]]
 name = "tangle-subxt"
 version = "0.11.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "20472342792207ec9356d66a8e1a0f8f4d74c6190851d67935c0ead17115e241"
 dependencies = [
  "parity-scale-codec",
  "scale-info",

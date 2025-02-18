@@ -252,7 +252,7 @@ mod tests {
     use rand::rngs::StdRng;
     use rand::seq::IteratorRandom;
     use rand::SeedableRng;
-    use round_based::simulation::Simulation;
+    use round_based::sim::Simulation;
     use test_strategy::proptest;
     use test_strategy::Arbitrary;
 
@@ -302,13 +302,11 @@ mod tests {
         let signer_set = signers.iter().map(|(i, _)| *i).collect::<Vec<_>>();
 
         eprintln!("Running a {} {t}-out-of-{n} Signing", C::ID);
-        let mut simulation = Simulation::<Msg<C>>::new();
-        let mut tasks = vec![];
+        let mut simulation = Simulation::<_, Msg<C>>::empty();
         for (i, (key_pkg, pub_key_pkg)) in signers {
-            let party = simulation.add_party();
             let signer_set = signer_set.clone();
             let msg = msg.to_vec();
-            let output = tokio::spawn(async move {
+            simulation.add_async_party(|party| async move {
                 let rng = &mut StdRng::seed_from_u64(u64::from(i + 1));
                 let mut tracer = PerfProfiler::new();
                 let output = run(
@@ -325,12 +323,12 @@ mod tests {
                 eprintln!("Party {} report: {}\n", i, report);
                 Result::<_, Error<C>>::Ok((i, output))
             });
-            tasks.push(output);
         }
 
-        let mut outputs = Vec::with_capacity(tasks.len());
+        let mut outputs = Vec::with_capacity(n as usize);
+        let tasks = simulation.run()?;
         for task in tasks {
-            outputs.push(task.await.unwrap());
+            outputs.push(task);
         }
         let outputs = outputs.into_iter().collect::<Result<BTreeMap<_, _>, _>>()?;
         // Assert that all parties produced a valid signature
@@ -357,11 +355,9 @@ mod tests {
         prop_assume!(frost_core::keys::validate_num_of_signers::<C>(t, n).is_ok());
 
         eprintln!("Running a {} {t}-out-of-{n} Keygen", C::ID);
-        let mut simulation = Simulation::<Msg<C>>::new();
-        let mut tasks = vec![];
+        let mut simulation = Simulation::<_, Msg<C>>::empty();
         for i in 0..n {
-            let party = simulation.add_party();
-            let output = tokio::spawn(async move {
+            simulation.add_async_party(|party| async move {
                 let rng = &mut StdRng::seed_from_u64(u64::from(i + 1));
                 let mut tracer = PerfProfiler::new();
                 let output = run(rng, t, n, i, party, Some(tracer.borrow_mut())).await?;
@@ -369,15 +365,15 @@ mod tests {
                 eprintln!("Party {} report: {}\n", i, report);
                 Result::<_, Error<C>>::Ok((i, output))
             });
-            tasks.push(output);
         }
 
-        let mut outputs = Vec::with_capacity(tasks.len());
+        let mut outputs = Vec::with_capacity(n as usize);
+        let tasks = simulation.run()?;
         for task in tasks {
-            outputs.push(task.await.unwrap());
+            outputs.push(task);
         }
         let outputs = outputs.into_iter().collect::<Result<BTreeMap<_, _>, _>>()?;
-        // Assert that all parties outputed the same public key
+        // Assert that all parties outputted the same public key
         let (_, pubkey_pkg) = outputs.get(&0).unwrap();
         for (_, other_pubkey_pkg) in outputs.values().skip(1) {
             prop_assert_eq!(pubkey_pkg, other_pubkey_pkg);
