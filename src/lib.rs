@@ -43,12 +43,10 @@ pub struct FrostContext {
 impl FrostContext {
     /// Create a new service context
     pub fn new(config: GadgetConfiguration) -> eyre::Result<Self> {
-        let network_config = config
-            .libp2p_network_config(NETWORK_PROTOCOL)
-            .map_err(|err| eyre::eyre!("Failed to create network configuration: {err}"))?;
+        let mut network_config = config.libp2p_network_config(NETWORK_PROTOCOL)?;
+        network_config.bind_port = random_port();
         let identity = network_config.secret_key.0.clone();
-        let gossip_handle = sdk::networking::setup::start_p2p_network(network_config)
-            .map_err(|err| eyre::eyre!("Failed to start the P2P network: {err}"))?;
+        let gossip_handle = sdk::networking::setup::start_p2p_network(network_config)?;
 
         Ok(Self {
             #[cfg(not(feature = "kv-sled"))]
@@ -69,4 +67,9 @@ impl FrostContext {
     pub fn current_call_id(&self) -> eyre::Result<u64> {
         self.call_id.ok_or_else(|| eyre::eyre!("Call ID not set"))
     }
+}
+
+fn random_port() -> u16 {
+    use rand::Rng;
+    rand::thread_rng().gen_range(10000..65535)
 }

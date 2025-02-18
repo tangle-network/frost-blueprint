@@ -63,7 +63,7 @@ blueprint-sdk = { git = "https://github.com/tangle-network/gadget.git", features
     "networking",
     "local-store",
     "networking-sp-core-ecdsa",
-] }
+], branch = "dynamic-test-executor" }
 
 
 [dev-dependencies]
@@ -77,10 +77,16 @@ round-based = { version = "0.3.0", default-features = false, features = ["derive
 proptest = { version = "1.5.0", default-features = false, features = ["std", "bit-set", "fork", "timeout"] }
 test-strategy = { version = "0.4.0", default-features = false }
 
-blueprint-sdk = { git = "https://github.com/tangle-network/gadget.git", features = ["std", "tangle", "testing"] }
+blueprint-sdk = { git = "https://github.com/tangle-network/gadget.git", features = [
+    "std",
+    "tangle",
+    "testing",
+], branch = "dynamic-test-executor" }
 
 [build-dependencies]
-blueprint-sdk = { git = "https://github.com/tangle-network/gadget.git", features = ["build"] }
+blueprint-sdk = { git = "https://github.com/tangle-network/gadget.git", features = [
+    "build",
+], branch = "dynamic-test-executor" }
 
 [features]
 default = ["std", "kv-sled"]

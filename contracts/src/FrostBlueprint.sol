@@ -16,6 +16,7 @@ contract FrostBlueprint is BlueprintServiceManagerBase, PaymentManagerBase {
     using EnumerableSet for EnumerableSet.AddressSet;
     using EnumerableMap for EnumerableMap.UintToAddressMap;
     using EnumerableMap for EnumerableMap.AddressToUintMap;
+    using ServiceOperators for bytes;
 
     // =============== CONSTANTS ======================
 
@@ -86,10 +87,7 @@ contract FrostBlueprint is BlueprintServiceManagerBase, PaymentManagerBase {
         bytes calldata _registrationInputs
     ) public payable override onlyFromMaster {
         // Grant the operator the OPERATOR_ROLE.
-        grantRole(
-            OPERATOR_ROLE,
-            operatorAddressFromPublicKey(operator.ecdsaPublicKey)
-        );
+        grantRole(OPERATOR_ROLE, operator.ecdsaPublicKey.asOperatorAddress());
     }
 
     /// @inheritdoc BlueprintServiceManagerBase
@@ -103,7 +101,7 @@ contract FrostBlueprint is BlueprintServiceManagerBase, PaymentManagerBase {
         for (uint256 i = 0; i < operatorsCount; i++) {
             _addServiceOperator(
                 params.requestId,
-                operatorAddressFromPublicKey(params.operators[i].ecdsaPublicKey)
+                params.operators[i].ecdsaPublicKey.asOperatorAddress()
             );
         }
     }
@@ -121,7 +119,7 @@ contract FrostBlueprint is BlueprintServiceManagerBase, PaymentManagerBase {
             _handleKeygenJobResult(
                 serviceId,
                 jobCallId,
-                operatorAddressFromPublicKey(operator.ecdsaPublicKey),
+                operator.ecdsaPublicKey.asOperatorAddress(),
                 inputs,
                 outputs
             );
@@ -129,7 +127,7 @@ contract FrostBlueprint is BlueprintServiceManagerBase, PaymentManagerBase {
             _handleSignJobResult(
                 serviceId,
                 jobCallId,
-                operatorAddressFromPublicKey(operator.ecdsaPublicKey),
+                operator.ecdsaPublicKey.asOperatorAddress(),
                 inputs,
                 outputs
             );
@@ -192,17 +190,6 @@ contract FrostBlueprint is BlueprintServiceManagerBase, PaymentManagerBase {
         } else {
             revert UnsupportedJob(jobId);
         }
-    }
-
-    /**
-     * @dev Converts a public key to an operator address.
-     * @param publicKey bytes The public key to convert.
-     * @return operator address The operator address.
-     */
-    function operatorAddressFromPublicKey(
-        bytes calldata publicKey
-    ) public pure returns (address operator) {
-        return address(uint160(uint256(keccak256(publicKey))));
     }
 
     /**
