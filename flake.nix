@@ -11,7 +11,7 @@
       };
     };
     foundry = {
-      url = "github:shazow/foundry.nix/monthly";
+      url = "github:shazow/foundry.nix/stable";
       inputs = {
         nixpkgs.follows = "nixpkgs";
         flake-utils.follows = "flake-utils";
@@ -19,10 +19,21 @@
     };
   };
 
-  outputs = { self, nixpkgs, rust-overlay, foundry, flake-utils }:
-    flake-utils.lib.eachDefaultSystem (system:
+  outputs =
+    {
+      self,
+      nixpkgs,
+      rust-overlay,
+      foundry,
+      flake-utils,
+    }:
+    flake-utils.lib.eachDefaultSystem (
+      system:
       let
-        overlays = [ (import rust-overlay) foundry.overlay ];
+        overlays = [
+          (import rust-overlay)
+          foundry.overlay
+        ];
         pkgs = import nixpkgs {
           inherit system overlays;
         };
@@ -39,7 +50,6 @@
             pkgs.openssl.dev
             pkgs.gmp
             # Mold Linker for faster builds (only on Linux)
-            (lib.optionals pkgs.stdenv.isLinux pkgs.om4)
             (lib.optionals pkgs.stdenv.isLinux pkgs.mold)
             (lib.optionals pkgs.stdenv.isDarwin pkgs.darwin.apple_sdk.frameworks.Security)
             (lib.optionals pkgs.stdenv.isDarwin pkgs.darwin.apple_sdk.frameworks.SystemConfiguration)
@@ -55,10 +65,16 @@
             pkgs.cargo-nextest
             pkgs.cargo-expand
           ];
-          packages = [];
+
+          packages = [ ];
           # Environment variables
           RUST_SRC_PATH = "${toolchain}/lib/rustlib/src/rust/library";
-          LD_LIBRARY_PATH = lib.makeLibraryPath [ pkgs.gmp pkgs.libclang pkgs.openssl.dev pkgs.stdenv.cc.cc ];
+          LD_LIBRARY_PATH = lib.makeLibraryPath [
+            pkgs.gmp
+            pkgs.libclang
+            pkgs.openssl.dev
+            pkgs.stdenv.cc.cc
+          ];
           # Add Forge from foundry to $HOME/.config/.foundry/bin/forge
           # by symlinking it to the flake's bin
           shellHook = ''
@@ -66,5 +82,6 @@
             ln -s ${pkgs.foundry-bin}/bin/forge $HOME/.config/.foundry/bin/forge
           '';
         };
-      });
+      }
+    );
 }

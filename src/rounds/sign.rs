@@ -6,7 +6,6 @@ use frost_core::round2::{sign, SignatureShare};
 use frost_core::{
     aggregate, verify_signature_share, Ciphersuite, Group, Identifier, Signature, SigningPackage,
 };
-use gadget_sdk::random::rand;
 use round_based::rounds_router::simple_store::RoundInput;
 use round_based::rounds_router::RoundsRouter;
 use round_based::{Delivery, Mpc, MpcParty, Outgoing, ProtocolMessage, SinkExt};
@@ -249,7 +248,6 @@ mod tests {
     use crate::rounds::trace::PerfProfiler;
 
     use super::*;
-    use blueprint_test_utils::setup_log;
     use proptest::prelude::*;
     use rand::rngs::StdRng;
     use rand::seq::IteratorRandom;
@@ -275,7 +273,6 @@ mod tests {
 
     #[proptest(async = "tokio", cases = 20, fork = true)]
     async fn it_works(case: TestCase) {
-        setup_log();
         match &case {
             TestCase::Ed25519(args) => run_signing::<frost_ed25519::Ed25519Sha512>(args).await?,
             TestCase::Secp256k1(args) => {

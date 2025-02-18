@@ -1,6 +1,6 @@
 [package]
 name = "frost-blueprint"
-version = "0.1.1"
+version = "0.2.0"
 edition = "2021"
 description = "FROST Blueprint built using Tangle Gadget SDK"
 authors = ["Webb Technologies Inc."]
@@ -34,11 +34,11 @@ manager = { Evm = "FrostBlueprint" }
 
 [dependencies]
 tracing = "0.1"
-thiserror = "1.0"
+thiserror = "2.0"
 displaydoc = "0.2.5"
 async-trait = "0.1"
-color-eyre = "0.6"
-structopt = "0.3.26"
+futures = "0.3"
+color-eyre = { version = "0.6", features = ["tracing-error", "color-spantrace"] }
 hex = "0.4"
 k256 = { version = "0.13.4" }
 tokio = { version = "^1", default-features = false, features = ["full", "rt-multi-thread"] }
@@ -46,21 +46,25 @@ tokio-stream = { version = "0.1", default-features = false }
 tracing-subscriber = { version = "0.3", features = ["parking_lot", "env-filter"] }
 serde = { version = "^1", default-features = false, features = ["alloc"] }
 serde_json = { version = "1.0", default-features = false, features = ["alloc"] }
-rand_chacha = { version = "0.3.1", default-features = false }
+rand = "0.8"
+rand_chacha = { version = "0.3", default-features = false }
 
 # FROST
-frost-core = { version = "2.0", default-features = false, features = ["serialization", "cheater-detection"] }
-frost-ed25519 = { version = "2.0", default-features = false, features = ["serialization", "cheater-detection"] }
-frost-secp256k1 = { version = "2.0", default-features = false, features = ["serialization", "cheater-detection"] }
+frost-core = { version = "2.1", default-features = false, features = ["serialization", "cheater-detection"] }
+frost-ed25519 = { version = "2.1", default-features = false, features = ["serialization", "cheater-detection"] }
+frost-secp256k1 = { version = "2.1", default-features = false, features = ["serialization", "cheater-detection"] }
 
 sled = { version = "0.34", default-features = false, optional = true }
 round-based = { version = "0.3.0", default-features = false, features = ["derive"] }
 
+blueprint-sdk = { git = "https://github.com/tangle-network/gadget.git", features = [
+    "macros",
+    "tangle",
+    "networking",
+    "local-store",
+    "networking-sp-core-ecdsa",
+] }
 
-[dependencies.gadget-sdk]
-version = "0.6.1"
-default-features = false
-features = ["getrandom"]
 
 [dev-dependencies]
 tokio = { version = "^1", default-features = false, features = ["full", "rt-multi-thread"] }
@@ -73,26 +77,15 @@ round-based = { version = "0.3.0", default-features = false, features = ["derive
 proptest = { version = "1.5.0", default-features = false, features = ["std", "bit-set", "fork", "timeout"] }
 test-strategy = { version = "0.4.0", default-features = false }
 
-cargo-tangle = "0.3.2"
-blueprint-test-utils = { version = "0.2.1", default-features = false, features = ["std"] }
-
-alloy-primitives = "0.8.14"
-alloy-provider = { version = "0.5.4", default-features = false, features = ["reqwest", "ws"] }
-alloy-signer = { version = "0.7.3" }
-alloy-signer-local = { version = "0.5.4" }
-alloy-rpc-client = "0.5.4"
-alloy-network = { version = "0.5.4" }
-alloy-json-abi = "0.8.14"
-alloy-sol-types = "0.8.14"
-alloy-contract = { version = "0.5.4" }
+blueprint-sdk = { git = "https://github.com/tangle-network/gadget.git", features = ["std", "tangle", "testing"] }
 
 [build-dependencies]
-blueprint-metadata = "0.2.0"
+blueprint-sdk = { git = "https://github.com/tangle-network/gadget.git", features = ["build"] }
 
 [features]
 default = ["std", "kv-sled"]
 std = [
-    "gadget-sdk/std",
+    "blueprint-sdk/std",
     "frost-core/std",
     "frost-ed25519/std",
     "frost-secp256k1/std",

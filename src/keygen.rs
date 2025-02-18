@@ -3,18 +3,23 @@ use std::collections::BTreeMap;
 use crate::rounds::keygen as keygen_protocol;
 use crate::FrostContext;
 use api::services::events::JobCalled;
+use blueprint_sdk::contexts::keystore::KeystoreContext;
+use blueprint_sdk::contexts::tangle::TangleClientContext;
+use blueprint_sdk::crypto::hashing::keccak_256;
+use blueprint_sdk::crypto::k256::K256Ecdsa;
+use blueprint_sdk::crypto::tangle_pair_signer::sp_core::ecdsa;
+use blueprint_sdk::keystore::backends::Backend;
+use blueprint_sdk::networking::GossipMsgPublicKey;
+use blueprint_sdk::tangle_subxt::subxt::ext::futures::TryFutureExt;
+use blueprint_sdk::{self as sdk, logging};
 use frost_core::keys::{KeyPackage, PublicKeyPackage};
 use frost_core::{Ciphersuite, VerifyingKey};
-use gadget_sdk::contexts::MPCContext;
-use gadget_sdk::futures::TryFutureExt;
-use gadget_sdk::network::round_based_compat::NetworkDeliveryWrapper;
-use gadget_sdk::subxt_core::ext::sp_core::{ecdsa, Pair};
-use gadget_sdk::subxt_core::utils::AccountId32;
-use gadget_sdk::{self as sdk, random};
-use sdk::event_listener::tangle::{
-    jobs::{services_post_processor, services_pre_processor},
-    TangleEventListener,
+use sdk::event_listeners::tangle::{
+    events::TangleEventListener, services::services_post_processor,
+    services::services_pre_processor,
 };
+use sdk::networking::round_based_compat::NetworkDeliveryWrapper;
+use sdk::tangle_subxt::subxt_core::utils::AccountId32;
 use sdk::tangle_subxt::tangle_testnet_runtime::api;
 
 #[derive(Debug, thiserror::Error)]
@@ -81,26 +86,35 @@ impl<C: Ciphersuite> From<keygen_protocol::Error<C>> for Error {
         post_processor = services_post_processor,
     )
 )]
-#[tracing::instrument(skip(context), parent = context.config.span.clone())]
+#[tracing::instrument(skip(context))]
 pub async fn keygen(
     ciphersuite: String,
     threshold: u16,
     context: FrostContext,
 ) -> Result<Vec<u8>, Error> {
-    let operators = context
-        .current_service_operators_ecdsa_keys()
-        .map_err(Error::Other)
+    let tangle_client = context
+        .tangle_client()
+        .map_err(|e| Error::Sdk(e.into()))
         .await?;
-    let my_ecdsa = context.config.first_ecdsa_signer()?;
-    let current_call_id = context.current_call_id().map_err(Error::Other).await?;
 
-    let rng = random::rand::rngs::OsRng;
+    let (i, operators) = tangle_client
+        .get_party_index_and_operators()
+        .map_err(|e| Error::Sdk(e.into()))
+        .await?;
+
+    let my_ecdsa = context
+        .keystore()
+        .first_local::<K256Ecdsa>()
+        .map_err(|e| Error::Other(e.into()))?;
+    let current_call_id = context.current_call_id().map_err(Error::Other)?;
+
+    let rng = rand::rngs::OsRng;
     let kv = context.store.clone();
     let key = match ciphersuite.as_str() {
         frost_ed25519::Ed25519Sha512::ID => keygen_internal::<frost_ed25519::Ed25519Sha512, _>(
             rng,
             kv,
-            my_ecdsa.signer().public(),
+            ecdsa::Public::from_full(&my_ecdsa.0.to_sec1_bytes()).unwrap(),
             operators,
             threshold,
             current_call_id,
@@ -112,7 +126,7 @@ pub async fn keygen(
             keygen_internal::<frost_secp256k1::Secp256K1Sha256, _>(
                 rng,
                 kv,
-                my_ecdsa.signer().public(),
+                ecdsa::Public::from_full(&my_ecdsa.0.to_sec1_bytes()).unwrap(),
                 operators,
                 threshold,
                 current_call_id,
@@ -151,7 +165,7 @@ where
     <<C as Ciphersuite>::Group as frost_core::Group>::Element: Send + Unpin,
     <<<C as Ciphersuite>::Group as frost_core::Group>::Field as frost_core::Field>::Scalar:
         Send + Unpin,
-    R: random::RngCore + random::CryptoRng,
+    R: rand::RngCore + rand::CryptoRng,
 {
     let n = participants.len();
     let i = participants
@@ -169,20 +183,23 @@ where
         .map(|(j, (_, ecdsa))| (j as u16, ecdsa))
         .collect();
 
-    let keygen_task_hash = gadget_sdk::compute_sha256_hash!(call_id.to_be_bytes(), "frost-keygen");
+    let keygen_task_hash = keccak_256(&call_id.to_be_bytes());
 
     let delivery = NetworkDeliveryWrapper::new(
         context.network_backend.clone(),
         i as _,
         keygen_task_hash,
-        parties.clone(),
+        parties
+            .iter()
+            .map(|(j, ecdsa)| (*j, GossipMsgPublicKey(*ecdsa)))
+            .collect(),
     );
     let party = round_based::MpcParty::connected(delivery);
     let (key_package, public_key_package) =
         keygen_protocol::run::<R, C, _>(&mut rng, t, n, i, party, None).await?;
     let verifying_key = *public_key_package.verifying_key();
     let pubkey = hex::encode(verifying_key.serialize()?);
-    sdk::debug!(%pubkey, "Keygen Done");
+    logging::debug!(%pubkey, "Keygen Done");
     let entry = serde_json::json!({
         "ciphersuite": C::ID,
         "entry": KeygenEntry {
