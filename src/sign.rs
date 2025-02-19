@@ -3,11 +3,11 @@ use api::services::events::JobCalled;
 use blueprint_sdk::contexts::keystore::KeystoreContext;
 use blueprint_sdk::contexts::tangle::TangleClientContext;
 use blueprint_sdk::crypto::hashing::keccak_256;
-use blueprint_sdk::crypto::k256::K256Ecdsa;
 use blueprint_sdk::crypto::tangle_pair_signer::sp_core::ecdsa;
 use blueprint_sdk::keystore::backends::Backend;
-use blueprint_sdk::networking::round_based_compat::NetworkDeliveryWrapper;
-use blueprint_sdk::networking::GossipMsgPublicKey;
+use blueprint_sdk::keystore::crypto::sp_core::SpEcdsa;
+use blueprint_sdk::networking::round_based_compat::RoundBasedNetworkAdapter;
+use blueprint_sdk::networking::InstanceMsgPublicKey;
 use blueprint_sdk::tangle_subxt::subxt::utils::AccountId32;
 use blueprint_sdk::{self as sdk, logging};
 use color_eyre::eyre;
@@ -80,9 +80,6 @@ impl<C: Ciphersuite> From<sign_protocol::Error<C>> for Error {
 ///
 /// # Errors
 /// - `KeyNotFound`: If the secret share for the key is not found.
-/// # Note
-/// - `ciphersuite`: 0 for Ed25519, 1 for Secp256k1.
-/// - `threshold`: The threshold of the keygen protocol should be less than the number of operators.
 #[sdk::job(
     id = 1,
     params(pubkey, msg),
@@ -115,7 +112,7 @@ pub async fn sign(pubkey: Vec<u8>, msg: Vec<u8>, context: FrostContext) -> Resul
 
     let my_ecdsa = context
         .keystore()
-        .first_local::<K256Ecdsa>()
+        .first_local::<SpEcdsa>()
         .map_err(|e| Error::Other(e.into()))?;
     let current_call_id = context.current_call_id().map_err(Error::Other)?;
 
@@ -127,7 +124,7 @@ pub async fn sign(pubkey: Vec<u8>, msg: Vec<u8>, context: FrostContext) -> Resul
                 serde_json::from_value(info_json_value["entry"].clone())?;
             signing_internal(
                 rng,
-                ecdsa::Public::from_full(&my_ecdsa.0.to_sec1_bytes()).unwrap(),
+                my_ecdsa.0,
                 operators,
                 entry.key_pkg,
                 entry.pub_key_pkg,
@@ -143,7 +140,7 @@ pub async fn sign(pubkey: Vec<u8>, msg: Vec<u8>, context: FrostContext) -> Resul
                 serde_json::from_value(info_json_value["entry"].clone())?;
             signing_internal(
                 rng,
-                ecdsa::Public::from_full(&my_ecdsa.0.to_sec1_bytes()).unwrap(),
+                my_ecdsa.0,
                 operators,
                 entry.key_pkg,
                 entry.pub_key_pkg,
@@ -185,10 +182,10 @@ async fn signing_internal<C, R>(
     context: &FrostContext,
 ) -> Result<Signature<C>, Error>
 where
-    C: Ciphersuite + Send + Unpin,
-    <<C as Ciphersuite>::Group as frost_core::Group>::Element: Send + Unpin,
+    C: Ciphersuite + Send + Sync + Unpin,
+    <<C as Ciphersuite>::Group as frost_core::Group>::Element: Send + Sync + Unpin,
     <<<C as Ciphersuite>::Group as frost_core::Group>::Field as frost_core::Field>::Scalar:
-        Send + Unpin,
+        Send + Sync + Unpin,
     R: rand::RngCore + rand::CryptoRng,
 {
     let pub_key = pub_key_pkg.verifying_key().serialize()?;
@@ -230,14 +227,14 @@ where
         keccak_256(&key)
     };
 
-    let delivery = NetworkDeliveryWrapper::new(
-        context.network_backend.clone(),
+    let delivery = RoundBasedNetworkAdapter::new(
+        context.network_service_handle.clone(),
         i,
-        signing_task_hash,
         selected_parties
             .iter()
-            .map(|(j, ecdsa)| (*j, GossipMsgPublicKey(*ecdsa)))
+            .map(|(j, ecdsa)| (*j, InstanceMsgPublicKey(*ecdsa)))
             .collect(),
+        hex::encode(signing_task_hash),
     );
 
     let party = round_based::MpcParty::connected(delivery);

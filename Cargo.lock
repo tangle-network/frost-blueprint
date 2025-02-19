@@ -2338,7 +2338,6 @@ version = "0.1.0"
 dependencies = [
  "blueprint-build-utils",
  "blueprint-metadata",
- "gadget-client-networking",
  "gadget-clients",
  "gadget-config",
  "gadget-context-derive",
@@ -2350,6 +2349,7 @@ dependencies = [
  "gadget-logging",
  "gadget-macros",
  "gadget-networking",
+ "gadget-networking-round-based-extension",
  "gadget-runners",
  "gadget-std",
  "gadget-stores",
@@ -3519,6 +3519,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "38fd53511eaf0b00a185613875fee58b208dfce016577d0ad4bb548e1c4fb3ee"
 dependencies = [
  "chrono",
+]
+
+[[package]]
+name = "crossbeam"
+version = "0.8.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1137cd7e7fc0fb5d3c5a8678be38ec56e819125d8d7907411fe24ccb943faca8"
+dependencies = [
+ "crossbeam-utils",
 ]
 
 [[package]]
@@ -6177,22 +6186,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "gadget-client-networking"
-version = "0.1.0"
-dependencies = [
- "gadget-client-core",
- "gadget-config",
- "gadget-crypto",
- "gadget-logging",
- "gadget-networking",
- "gadget-std",
- "libp2p",
- "serde",
- "serde_json",
- "thiserror 2.0.11",
-]
-
-[[package]]
 name = "gadget-client-tangle"
 version = "0.1.0"
 dependencies = [
@@ -6219,7 +6212,6 @@ dependencies = [
  "gadget-client-core",
  "gadget-client-eigenlayer",
  "gadget-client-evm",
- "gadget-client-networking",
  "gadget-client-tangle",
  "gadget-std",
  "thiserror 2.0.11",
@@ -6578,12 +6570,16 @@ dependencies = [
 name = "gadget-networking"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
  "async-trait",
  "auto_impl",
  "bincode",
+ "blake3",
+ "crossbeam-channel",
  "dashmap",
  "futures",
  "gadget-crypto",
+ "gadget-crypto-core",
  "gadget-logging",
  "gadget-std",
  "hex",
@@ -6592,6 +6588,23 @@ dependencies = [
  "libp2p",
  "lru-mem",
  "parking_lot 0.12.3",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.11",
+ "tokio",
+ "tokio-stream",
+ "tracing",
+]
+
+[[package]]
+name = "gadget-networking-round-based-extension"
+version = "0.1.0"
+dependencies = [
+ "crossbeam",
+ "crossbeam-channel",
+ "dashmap",
+ "futures",
+ "gadget-networking",
  "round-based",
  "serde",
  "serde_json",

@@ -12,6 +12,7 @@ use sdk::testing::tempfile;
 use sdk::testing::utils::harness::TestHarness;
 use sdk::testing::utils::tangle::TangleTestHarness;
 use sdk::testing::utils::tangle::{InputValue, OutputValue};
+use tokio::time::timeout;
 
 const N: usize = 3;
 const T: usize = N / 2 + 1;
@@ -23,25 +24,29 @@ async fn keygen_e2e() -> color_eyre::Result<()> {
     logging::setup_log();
 
     logging::info!("Running FROST blueprint test");
+    let test_timeout = std::time::Duration::from_secs(60);
     let tmp_dir = tempfile::TempDir::new()?;
     let harness = TangleTestHarness::setup(tmp_dir).await?;
+    let exit_after_registration = false;
 
     // Setup service
-    let (mut test_env, service_id, _blueprint_id) = harness.setup_services::<N>(false).await?;
+    let (mut test_env, service_id, _blueprint_id) =
+        harness.setup_services::<N>(exit_after_registration).await?;
     test_env.initialize().await?;
     // Get the alice node
     let handles = test_env.node_handles().await;
 
-    let alice_handle = handles[0].clone();
-    let alice_env = alice_handle.gadget_config().await;
+    for handle in &handles {
+        let env = handle.gadget_config().await;
 
-    // Create blueprint-specific context
-    let blueprint_ctx = FrostContext::new(alice_env.clone())?;
+        // Create blueprint-specific context
+        let blueprint_ctx = FrostContext::new(env.clone())?;
 
-    // Create the event handlers
-    let keygen = KeygenEventHandler::new(&alice_env, blueprint_ctx.clone()).await?;
+        // Create the event handlers
+        let keygen = KeygenEventHandler::new(&env, blueprint_ctx).await?;
 
-    alice_handle.add_job(keygen).await;
+        handle.add_job(keygen).await;
+    }
 
     test_env.start().await?;
 
@@ -61,7 +66,11 @@ async fn keygen_e2e() -> color_eyre::Result<()> {
         "Submitted KEYGEN job {KEYGEN_JOB_ID} with service ID {service_id} has call id {keygen_call_id}"
     );
     // Execute job and verify result
-    let results = harness.wait_for_job_execution(service_id, job).await?;
+    let results = timeout(
+        test_timeout,
+        harness.wait_for_job_execution(service_id, job),
+    )
+    .await??;
     assert_eq!(results.service_id, service_id);
     Ok(())
 }

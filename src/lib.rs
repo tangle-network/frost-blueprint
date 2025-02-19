@@ -2,10 +2,10 @@
 use std::sync::Arc;
 
 use blueprint_sdk as sdk;
+use blueprint_sdk::networking::service_handle::NetworkServiceHandle;
 use color_eyre::eyre;
 use sdk::config::GadgetConfiguration;
 use sdk::macros::contexts::{KeystoreContext, ServicesContext, TangleClientContext};
-use sdk::networking::networking::NetworkMultiplexer;
 
 use sdk::crypto::tangle_pair_signer::sp_core;
 
@@ -19,7 +19,7 @@ pub mod rounds;
 pub mod sign;
 
 /// The network protocol for the FROST service
-const NETWORK_PROTOCOL: &str = "/zcash/frost/1.0.0";
+const NETWORK_PROTOCOL: &str = "zcash/frost/1.0.0";
 
 /// FROST Service Context that holds all the necessary context for the service
 /// to run
@@ -31,8 +31,8 @@ pub struct FrostContext {
     /// The call id for the service
     #[call_id]
     call_id: Option<u64>,
-    /// The gossip handle for the network
-    network_backend: Arc<NetworkMultiplexer>,
+    /// The service handle for the networking.
+    network_service_handle: NetworkServiceHandle,
     /// The key-value store for the service
     store: kv::SharedDynKVStore<String, Vec<u8>>,
     /// Account id
@@ -43,10 +43,9 @@ pub struct FrostContext {
 impl FrostContext {
     /// Create a new service context
     pub fn new(config: GadgetConfiguration) -> eyre::Result<Self> {
-        let mut network_config = config.libp2p_network_config(NETWORK_PROTOCOL)?;
-        network_config.bind_port = random_port();
-        let identity = network_config.secret_key.0.clone();
-        let gossip_handle = sdk::networking::setup::start_p2p_network(network_config)?;
+        let network_config = config.libp2p_network_config(NETWORK_PROTOCOL)?;
+        let identity = network_config.instance_secret_key.0.clone();
+        let network_service_handle = config.libp2p_start_network(network_config)?;
 
         Ok(Self {
             #[cfg(not(feature = "kv-sled"))]
@@ -59,7 +58,7 @@ impl FrostContext {
             config,
             call_id: None,
             account_id: identity,
-            network_backend: Arc::new(NetworkMultiplexer::new(gossip_handle)),
+            network_service_handle,
         })
     }
 
@@ -67,9 +66,4 @@ impl FrostContext {
     pub fn current_call_id(&self) -> eyre::Result<u64> {
         self.call_id.ok_or_else(|| eyre::eyre!("Call ID not set"))
     }
-}
-
-fn random_port() -> u16 {
-    use rand::Rng;
-    rand::thread_rng().gen_range(10000..65535)
 }

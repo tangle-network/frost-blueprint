@@ -6,10 +6,10 @@ use api::services::events::JobCalled;
 use blueprint_sdk::contexts::keystore::KeystoreContext;
 use blueprint_sdk::contexts::tangle::TangleClientContext;
 use blueprint_sdk::crypto::hashing::keccak_256;
-use blueprint_sdk::crypto::k256::K256Ecdsa;
 use blueprint_sdk::crypto::tangle_pair_signer::sp_core::ecdsa;
 use blueprint_sdk::keystore::backends::Backend;
-use blueprint_sdk::networking::GossipMsgPublicKey;
+use blueprint_sdk::keystore::crypto::sp_core::SpEcdsa;
+use blueprint_sdk::networking::InstanceMsgPublicKey;
 use blueprint_sdk::tangle_subxt::subxt::ext::futures::TryFutureExt;
 use blueprint_sdk::{self as sdk, logging};
 use frost_core::keys::{KeyPackage, PublicKeyPackage};
@@ -18,7 +18,7 @@ use sdk::event_listeners::tangle::{
     events::TangleEventListener, services::services_post_processor,
     services::services_pre_processor,
 };
-use sdk::networking::round_based_compat::NetworkDeliveryWrapper;
+use sdk::networking::round_based_compat::RoundBasedNetworkAdapter;
 use sdk::tangle_subxt::subxt_core::utils::AccountId32;
 use sdk::tangle_subxt::tangle_testnet_runtime::api;
 
@@ -86,12 +86,13 @@ impl<C: Ciphersuite> From<keygen_protocol::Error<C>> for Error {
         post_processor = services_post_processor,
     )
 )]
-#[tracing::instrument(skip(context))]
+#[tracing::instrument(target = "gadget", skip(context), err)]
 pub async fn keygen(
     ciphersuite: String,
     threshold: u16,
     context: FrostContext,
 ) -> Result<Vec<u8>, Error> {
+    logging::info!("Running keygen job");
     let tangle_client = context
         .tangle_client()
         .map_err(|e| Error::Sdk(e.into()))
@@ -104,7 +105,7 @@ pub async fn keygen(
 
     let my_ecdsa = context
         .keystore()
-        .first_local::<K256Ecdsa>()
+        .first_local::<SpEcdsa>()
         .map_err(|e| Error::Other(e.into()))?;
     let current_call_id = context.current_call_id().map_err(Error::Other)?;
 
@@ -114,7 +115,7 @@ pub async fn keygen(
         frost_ed25519::Ed25519Sha512::ID => keygen_internal::<frost_ed25519::Ed25519Sha512, _>(
             rng,
             kv,
-            ecdsa::Public::from_full(&my_ecdsa.0.to_sec1_bytes()).unwrap(),
+            my_ecdsa.0,
             operators,
             threshold,
             current_call_id,
@@ -126,7 +127,7 @@ pub async fn keygen(
             keygen_internal::<frost_secp256k1::Secp256K1Sha256, _>(
                 rng,
                 kv,
-                ecdsa::Public::from_full(&my_ecdsa.0.to_sec1_bytes()).unwrap(),
+                my_ecdsa.0,
                 operators,
                 threshold,
                 current_call_id,
@@ -161,10 +162,10 @@ async fn keygen_internal<C, R>(
     context: &FrostContext,
 ) -> Result<VerifyingKey<C>, Error>
 where
-    C: Ciphersuite + Send + Unpin,
-    <<C as Ciphersuite>::Group as frost_core::Group>::Element: Send + Unpin,
+    C: Ciphersuite + Sync + Send + Unpin,
+    <<C as Ciphersuite>::Group as frost_core::Group>::Element: Sync + Send + Unpin,
     <<<C as Ciphersuite>::Group as frost_core::Group>::Field as frost_core::Field>::Scalar:
-        Send + Unpin,
+        Send + Sync + Unpin,
     R: rand::RngCore + rand::CryptoRng,
 {
     let n = participants.len();
@@ -177,6 +178,8 @@ where
     let i = u16::try_from(i)?;
     tracing::span::Span::current().record("i", i);
 
+    logging::info!(%i, %n, "Keygen Start");
+
     let parties: BTreeMap<u16, _> = participants
         .into_iter()
         .enumerate()
@@ -185,14 +188,14 @@ where
 
     let keygen_task_hash = keccak_256(&call_id.to_be_bytes());
 
-    let delivery = NetworkDeliveryWrapper::new(
-        context.network_backend.clone(),
+    let delivery = RoundBasedNetworkAdapter::new(
+        context.network_service_handle.clone(),
         i as _,
-        keygen_task_hash,
         parties
             .iter()
-            .map(|(j, ecdsa)| (*j, GossipMsgPublicKey(*ecdsa)))
+            .map(|(j, ecdsa)| (*j, InstanceMsgPublicKey(*ecdsa)))
             .collect(),
+        hex::encode(keygen_task_hash),
     );
     let party = round_based::MpcParty::connected(delivery);
     let (key_package, public_key_package) =

@@ -20,7 +20,7 @@ name = "frost-blueprint"
 path = "src/main.rs"
 
 [package.metadata.blueprint]
-manager = { Evm = "FrostBlueprint" }
+manager = { Evm = "Dummy" }
 
 # [[package.metadata.gadget.Native.sources]]
 # owner = "tangle-network"
@@ -63,6 +63,7 @@ blueprint-sdk = { path = "../gadget/crates/sdk", features = [
     "networking",
     "local-store",
     "networking-sp-core-ecdsa",
+    "round-based-compat",
 ] }
 
 
@@ -77,7 +78,7 @@ round-based = { version = "0.4.1", default-features = false, features = ["derive
 proptest = { version = "1.5.0", default-features = false, features = ["std", "bit-set", "fork", "timeout"] }
 test-strategy = { version = "0.4.0", default-features = false }
 
-blueprint-sdk = { path = "../gadget/crates/sdk", features = ["std", "tangle", "testing"] }
+blueprint-sdk = { path = "../gadget/crates/sdk", features = ["std", "tangle", "testing", "round-based-compat"] }
 
 [build-dependencies]
 blueprint-sdk = { path = "../gadget/crates/sdk", features = ["build"] }
