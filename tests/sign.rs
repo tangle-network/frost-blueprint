@@ -1,8 +1,10 @@
 #![cfg(all(test, feature = "e2e"))]
 
 use blueprint::keygen::{KeygenEventHandler, KEYGEN_JOB_ID};
+use blueprint::sign::{SignEventHandler, SIGN_JOB_ID};
 use blueprint_sdk::tangle_subxt::tangle_testnet_runtime::api::runtime_types::tangle_primitives::services::field::BoundedString;
 use blueprint_sdk::tangle_subxt::tangle_testnet_runtime::api::runtime_types::bounded_collections::bounded_vec::BoundedVec;
+use blueprint_sdk::testing::utils::tangle::OutputValue;
 use frost_blueprint as blueprint;
 use blueprint::FrostContext;
 use blueprint_sdk as sdk;
@@ -16,10 +18,9 @@ use tokio::time::timeout;
 
 const N: usize = 3;
 const T: usize = N / 2 + 1;
-const CIPHERSUITE: &str = frost_ed25519::Ed25519Sha512::ID;
 
 #[tokio::test(flavor = "multi_thread")]
-async fn keygen_e2e() -> color_eyre::Result<()> {
+async fn sign_e2e() -> color_eyre::Result<()> {
     color_eyre::install()?;
     logging::setup_log();
 
@@ -42,15 +43,17 @@ async fn keygen_e2e() -> color_eyre::Result<()> {
         let blueprint_ctx = FrostContext::new(env.clone()).await?;
 
         // Create the event handlers
-        let keygen = KeygenEventHandler::new(&env, blueprint_ctx).await?;
+        let keygen = KeygenEventHandler::new(&env, blueprint_ctx.clone()).await?;
+        let sign = SignEventHandler::new(&env, blueprint_ctx).await?;
 
         handle.add_job(keygen).await;
+        handle.add_job(sign).await;
     }
 
     test_env.start().await?;
 
     let ciphersuite = InputValue::String(BoundedString(BoundedVec(
-        CIPHERSUITE.to_string().into_bytes(),
+        frost_ed25519::Ed25519Sha512::ID.to_string().into_bytes(),
     )));
     let threshold = InputValue::Uint16(T as u16);
 
@@ -71,5 +74,62 @@ async fn keygen_e2e() -> color_eyre::Result<()> {
     )
     .await??;
     assert_eq!(results.service_id, service_id);
+
+    logging::info!("Submitting SIGN job {SIGN_JOB_ID} with service ID {service_id}",);
+
+    let msg = InputValue::List(BoundedVec(
+        b"Hello World!"
+            .as_slice()
+            .iter()
+            .map(|x| InputValue::Uint8(*x))
+            .collect(),
+    ));
+    let pubkey = results.result[0].clone();
+
+    let job = harness
+        .submit_job(service_id, SIGN_JOB_ID, vec![pubkey.clone(), msg])
+        .await?;
+    let sign_call_id = job.call_id;
+    logging::info!(
+        "Submitted SIGN job {SIGN_JOB_ID} with service ID {service_id} has call id {sign_call_id}"
+    );
+
+    let sign_results = timeout(
+        test_timeout,
+        harness.wait_for_job_execution(service_id, job),
+    )
+    .await??;
+    assert_eq!(sign_results.service_id, service_id);
+
+    // Verify signature
+    let OutputValue::List(BoundedVec(signature)) = sign_results.result[0].clone() else {
+        panic!("Expected signature to be a list of bytes");
+    };
+    let signature_bytes = signature
+        .iter()
+        .flat_map(|b| match b {
+            InputValue::Uint8(x) => Some(*x),
+            _ => None,
+        })
+        .collect::<Vec<u8>>();
+    let OutputValue::List(BoundedVec(pubkey)) = pubkey else {
+        panic!("Expected public key to be a list of bytes");
+    };
+    let pubkey_bytes = pubkey
+        .iter()
+        .flat_map(|b| match b {
+            InputValue::Uint8(x) => Some(*x),
+            _ => None,
+        })
+        .collect::<Vec<u8>>();
+    let signature =
+        frost_core::Signature::<frost_ed25519::Ed25519Sha512>::deserialize(&signature_bytes)
+            .unwrap();
+
+    let pubkey =
+        frost_core::VerifyingKey::<frost_ed25519::Ed25519Sha512>::deserialize(&pubkey_bytes)
+            .unwrap();
+
+    assert!(pubkey.verify(b"Hello World!", &signature).is_ok());
     Ok(())
 }

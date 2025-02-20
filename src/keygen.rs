@@ -117,6 +117,7 @@ pub async fn keygen(
             kv,
             my_ecdsa.0,
             operators,
+            i.try_into()?,
             threshold,
             current_call_id,
             &context,
@@ -129,6 +130,7 @@ pub async fn keygen(
                 kv,
                 my_ecdsa.0,
                 operators,
+                i.try_into()?,
                 threshold,
                 current_call_id,
                 &context,
@@ -150,13 +152,14 @@ pub struct KeygenEntry<C: Ciphersuite> {
     pub pub_key_pkg: PublicKeyPackage<C>,
 }
 
-/// A genaric keygen protocol over any ciphersuite.
-#[tracing::instrument(skip(rng, kv, context), fields(ciphersuite = %C::ID,  i = tracing::field::Empty, n = %participants.len()))]
+/// A generic keygen protocol over any ciphersuite.
+#[tracing::instrument(skip(rng, kv, context), fields(ciphersuite = %C::ID,  i, n = %participants.len()))]
 async fn keygen_internal<C, R>(
     mut rng: R,
     kv: crate::kv::SharedDynKVStore<String, Vec<u8>>,
     me: ecdsa::Public,
     participants: BTreeMap<AccountId32, ecdsa::Public>,
+    i: u16,
     t: u16,
     call_id: u64,
     context: &FrostContext,
@@ -169,14 +172,8 @@ where
     R: rand::RngCore + rand::CryptoRng,
 {
     let n = participants.len();
-    let i = participants
-        .values()
-        .position(|k| k == &me)
-        .ok_or(Error::SelfNotInOperators)?;
 
     let n = u16::try_from(n)?;
-    let i = u16::try_from(i)?;
-    tracing::span::Span::current().record("i", i);
 
     logging::info!(%i, %n, "Keygen Start");
 
@@ -213,163 +210,4 @@ where
     // Save the keygen entry.
     kv.set(pubkey, serde_json::to_vec(&entry)?)?;
     Ok(verifying_key)
-}
-
-#[cfg(all(test, feature = "e2e"))]
-mod e2e {
-    use alloy_primitives::U256;
-    use alloy_sol_types::sol;
-    use api::runtime_types::bounded_collections::bounded_vec::BoundedVec;
-    use api::runtime_types::tangle_primitives::services::field::BoundedString;
-    use api::runtime_types::tangle_primitives::services::field::Field;
-    use api::runtime_types::tangle_primitives::services::BlueprintServiceManager;
-    use api::services::calls::types::call::Args;
-    use blueprint_test_utils::test_ext::*;
-    use blueprint_test_utils::*;
-    use cargo_tangle::deploy::Opts;
-    use gadget_sdk::error;
-    use gadget_sdk::info;
-
-    use super::*;
-
-    pub fn setup_testing_log() {
-        use tracing_subscriber::util::SubscriberInitExt;
-        let env_filter = tracing_subscriber::EnvFilter::from_default_env();
-        let _ = tracing_subscriber::fmt::SubscriberBuilder::default()
-            .without_time()
-            .with_target(true)
-            .with_span_events(tracing_subscriber::fmt::format::FmtSpan::NONE)
-            .with_env_filter(env_filter)
-            .with_test_writer()
-            .finish()
-            .try_init();
-    }
-
-    sol!(
-        #[sol(rpc)]
-        FrostBlueprint,
-        "contracts/out/FrostBlueprint.sol/FrostBlueprint.json",
-    );
-
-    sol!(
-        #[sol(rpc)]
-        ERC20,
-        "contracts/out/ERC20.sol/ERC20.json"
-    );
-
-    #[tokio::test(flavor = "multi_thread")]
-    #[allow(clippy::needless_return)]
-    async fn keygen() {
-        setup_testing_log();
-        let tangle = tangle::run().unwrap();
-        let base_path = std::env::current_dir().expect("Failed to get current directory");
-        let base_path = base_path
-            .canonicalize()
-            .expect("File could not be normalized");
-
-        let manifest_path = base_path.join("Cargo.toml");
-
-        let ws_port = tangle.ws_port();
-        let http_rpc_url = format!("http://127.0.0.1:{ws_port}");
-        let ws_rpc_url = format!("ws://127.0.0.1:{ws_port}");
-
-        let opts = Opts {
-            pkg_name: option_env!("CARGO_BIN_NAME").map(ToOwned::to_owned),
-            http_rpc_url,
-            ws_rpc_url,
-            manifest_path,
-            signer: None,
-            signer_evm: None,
-        };
-
-        const N: usize = 3;
-        const T: usize = N / 2 + 1;
-        const CIPHERSUITE: &str = frost_ed25519::Ed25519Sha512::ID;
-
-        new_test_ext_blueprint_manager::<N, 1, _, _, _>("", opts, run_test_blueprint_manager)
-            .await
-            .execute_with_async(move |client, handles, svcs| async move {
-                // At this point, blueprint has been deployed, every node has registered
-                // as an operator for the relevant services, and, all gadgets are running
-
-                let keypair = handles[0].sr25519_id().clone();
-
-                // Fund the Blueprint manager contract with Some TNT.
-                let blueprint_manager = match svcs.blueprint.manager {
-                    BlueprintServiceManager::Evm(contract_address) => contract_address.0.into(),
-                };
-
-                let tnt = 500;
-                let value = U256::from(tnt) * U256::from(10).pow(U256::from(18));
-
-                let signer = cargo_tangle::signer::load_evm_signer_from_env().unwrap();
-
-                let wallet = alloy_network::EthereumWallet::from(signer);
-
-                let ws_rpc_url = format!("ws://127.0.0.1:{ws_port}");
-                let provider = alloy_provider::ProviderBuilder::new()
-                    .with_recommended_fillers()
-                    .wallet(wallet)
-                    .on_ws(alloy_provider::WsConnect::new(ws_rpc_url))
-                    .await
-                    .unwrap();
-
-                let frost_blueprint = FrostBlueprint::new(blueprint_manager, provider.clone());
-                let tnt_token_address = frost_blueprint
-                    .TNT_ERC20_ADDRESS()
-                    .call()
-                    .await
-                    .map(|t| t.TNT_ERC20_ADDRESS)
-                    .unwrap();
-                let tnt_token = ERC20::new(tnt_token_address, provider.clone());
-
-                // Send Some TNT to the Blueprint manager contract.
-                let tx = tnt_token.transfer(blueprint_manager, value);
-                let receipt = tx.send().await.unwrap().get_receipt().await.unwrap();
-                assert!(
-                    receipt.status(),
-                    "Failed to fund the Blueprint manager contract with TNT"
-                );
-
-                // Double check that the Blueprint manager contract has been funded with TNT.
-                let balance = tnt_token.balanceOf(blueprint_manager).call().await.unwrap();
-                assert_eq!(balance._0, value);
-
-                let service = svcs.services.last().unwrap();
-
-                let service_id = service.id;
-                let call_id = get_next_call_id(client)
-                    .await
-                    .expect("Failed to get next job id")
-                    .saturating_sub(1);
-
-                info!("Submitting job with params service ID: {service_id}, call ID: {call_id}");
-
-                // Pass the arguments
-                let ciphersuite = Field::String(BoundedString(BoundedVec(
-                    CIPHERSUITE.to_string().into_bytes(),
-                )));
-                let threshold = Field::Uint16(T as u16);
-                let job_args = Args::from([ciphersuite, threshold]);
-
-                // Next step: submit a job under that service/job id
-                if let Err(err) =
-                    submit_job(client, &keypair, service_id, KEYGEN_JOB_ID, job_args).await
-                {
-                    error!("Failed to submit job: {err}");
-                    panic!("Failed to submit job: {err}");
-                }
-
-                // Step 2: wait for the job to complete
-                let job_results = wait_for_completion_of_tangle_job(client, service_id, call_id, T)
-                    .await
-                    .expect("Failed to wait for job completion");
-
-                // Step 3: Get the job results, compare to expected value(s)
-                assert_eq!(job_results.service_id, service_id);
-                assert_eq!(job_results.call_id, call_id);
-                assert!(matches!(job_results.result[0], Field::Bytes(_)));
-            })
-            .await;
-    }
 }

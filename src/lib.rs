@@ -2,7 +2,10 @@
 use std::sync::Arc;
 
 use blueprint_sdk as sdk;
+use blueprint_sdk::clients::GadgetServicesClient;
+use blueprint_sdk::contexts::tangle::TangleClientContext;
 use blueprint_sdk::networking::service_handle::NetworkServiceHandle;
+use blueprint_sdk::networking::InstanceMsgPublicKey;
 use color_eyre::eyre;
 use sdk::config::GadgetConfiguration;
 use sdk::macros::contexts::{KeystoreContext, ServicesContext, TangleClientContext};
@@ -19,7 +22,7 @@ pub mod rounds;
 pub mod sign;
 
 /// The network protocol for the FROST service
-const NETWORK_PROTOCOL: &str = "zcash/frost/1.0.0";
+const NETWORK_PROTOCOL: &str = "/zcash/frost/1.0.0";
 
 /// FROST Service Context that holds all the necessary context for the service
 /// to run
@@ -42,10 +45,15 @@ pub struct FrostContext {
 
 impl FrostContext {
     /// Create a new service context
-    pub fn new(config: GadgetConfiguration) -> eyre::Result<Self> {
+    pub async fn new(config: GadgetConfiguration) -> eyre::Result<Self> {
         let network_config = config.libp2p_network_config(NETWORK_PROTOCOL)?;
-        let identity = network_config.instance_secret_key.0.clone();
-        let network_service_handle = config.libp2p_start_network(network_config)?;
+        let identity = network_config.instance_key_pair.0.clone();
+        let service_operators = config.tangle_client().await?.get_operators().await?;
+        let allowed_keys = service_operators
+            .values()
+            .map(|k| InstanceMsgPublicKey(*k))
+            .collect();
+        let network_service_handle = config.libp2p_start_network(network_config, allowed_keys)?;
 
         Ok(Self {
             #[cfg(not(feature = "kv-sled"))]

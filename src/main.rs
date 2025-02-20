@@ -13,7 +13,7 @@ async fn main() -> Result<()> {
 
     let config = TangleConfig::default();
 
-    let context = blueprint::FrostContext::new(env.clone())?;
+    let context = blueprint::FrostContext::new(env.clone()).await?;
 
     let keygen = blueprint::keygen::KeygenEventHandler::new(&env, context.clone()).await?;
     let sign = blueprint::sign::SignEventHandler::new(&env, context.clone()).await?;

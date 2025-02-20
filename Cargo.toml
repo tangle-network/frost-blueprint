@@ -20,7 +20,7 @@ name = "frost-blueprint"
 path = "src/main.rs"
 
 [package.metadata.blueprint]
-manager = { Evm = "Dummy" }
+manager = { Evm = "FrostBlueprint" }
 
 # [[package.metadata.gadget.Native.sources]]
 # owner = "tangle-network"
