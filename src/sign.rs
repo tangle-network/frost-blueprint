@@ -44,7 +44,7 @@ pub enum Error {
     #[error(transparent)]
     Json(#[from] serde_json::Error),
     #[error(transparent)]
-    Config(#[from] sdk::config::Error),
+    Config(#[from] Box<sdk::config::Error>),
     #[error("Protocol error: {0}")]
     Protocol(Box<dyn std::error::Error>),
     #[error("Frost error: {0}")]

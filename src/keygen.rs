@@ -28,13 +28,12 @@ pub enum Error {
     UnknwonCiphersuite(String),
     #[error("Self not in operators")]
     SelfNotInOperators,
-
     #[error(transparent)]
     Subxt(#[from] sdk::tangle_subxt::subxt::Error),
     #[error(transparent)]
     Sdk(#[from] sdk::error::Error),
     #[error(transparent)]
-    Config(#[from] sdk::config::Error),
+    Config(#[from] Box<sdk::config::Error>),
     #[error("Frost error: {0}")]
     Frost(Box<dyn std::error::Error>),
     #[error("Protocol error: {0}")]
@@ -154,6 +153,7 @@ pub struct KeygenEntry<C: Ciphersuite> {
 
 /// A generic keygen protocol over any ciphersuite.
 #[tracing::instrument(skip(rng, kv, context), fields(ciphersuite = %C::ID,  i, n = %participants.len()))]
+#[allow(clippy::too_many_arguments)]
 async fn keygen_internal<C, R>(
     mut rng: R,
     kv: crate::kv::SharedDynKVStore<String, Vec<u8>>,
