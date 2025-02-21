@@ -16,6 +16,4 @@ remappings_version = false
 [dependencies]
 forge-std = "1.9.4"
 "@openzeppelin-contracts" = "5.1.0"
-tnt-core = "0.2.0"
-
-# See more config options https://github.com/foundry-rs/foundry/blob/master/crates/config/README.md#all-options
+tnt-core = "0.3.0"
