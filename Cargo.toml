@@ -49,7 +49,7 @@ serde_json = { version = "1.0", default-features = false, features = ["alloc"] }
 rand_chacha = { version = "0.3.1", default-features = false }
 
 # FROST
-frost-core = { version = "2.0", default-features = false, features = ["serialization", "cheater-detection"] }
+frost-core = { version = "2.1", default-features = false, features = ["serialization", "cheater-detection"] }
 frost-ed25519 = { version = "2.0", default-features = false, features = ["serialization", "cheater-detection"] }
 frost-secp256k1 = { version = "2.0", default-features = false, features = ["serialization", "cheater-detection"] }
 
@@ -64,7 +64,7 @@ features = ["getrandom"]
 
 [dev-dependencies]
 tokio = { version = "^1", default-features = false, features = ["full", "rt-multi-thread"] }
-frost-core = { version = "2.0", default-features = false, features = [
+frost-core = { version = "2.1", default-features = false, features = [
     "serialization",
     "cheater-detection",
     "internals",
