@@ -57,7 +57,7 @@ frost-secp256k1 = { version = "2.1", default-features = false, features = ["seri
 sled = { version = "0.34", default-features = false, optional = true }
 round-based = { version = "0.4.1", default-features = false, features = ["derive"] }
 
-blueprint-sdk = { path = "../gadget/crates/sdk", features = [
+blueprint-sdk = { git = "https://github.com/tangle-network/gadget", features = [
     "macros",
     "tangle",
     "networking",
@@ -78,10 +78,10 @@ round-based = { version = "0.4.1", default-features = false, features = ["derive
 proptest = { version = "1.5.0", default-features = false, features = ["std", "bit-set", "fork", "timeout"] }
 test-strategy = { version = "0.4.0", default-features = false }
 
-blueprint-sdk = { path = "../gadget/crates/sdk", features = ["std", "tangle", "testing", "round-based-compat"] }
+blueprint-sdk = { git = "https://github.com/tangle-network/gadget", features = ["std", "tangle", "testing", "round-based-compat"] }
 
 [build-dependencies]
-blueprint-sdk = { path = "../gadget/crates/sdk", features = ["build"] }
+blueprint-sdk = { git = "https://github.com/tangle-network/gadget", features = ["build"] }
 
 [features]
 default = ["std", "kv-sled"]
