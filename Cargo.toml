@@ -81,7 +81,7 @@ alloy-provider = { version = "0.5.4", default-features = false, features = ["req
 alloy-signer = { version = "0.7.3" }
 alloy-signer-local = { version = "0.5.4" }
 alloy-rpc-client = "0.5.4"
-alloy-network = { version = "0.5.4" }
+alloy-network = { version = "0.7.3" }
 alloy-json-abi = "0.8.14"
 alloy-sol-types = "0.8.14"
 alloy-contract = { version = "0.5.4" }
