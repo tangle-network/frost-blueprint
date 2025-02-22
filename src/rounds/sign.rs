@@ -6,7 +6,6 @@ use frost_core::round2::{sign, SignatureShare};
 use frost_core::{
     aggregate, verify_signature_share, Ciphersuite, Group, Identifier, Signature, SigningPackage,
 };
-use gadget_sdk::random::rand;
 use round_based::rounds_router::simple_store::RoundInput;
 use round_based::rounds_router::RoundsRouter;
 use round_based::{Delivery, Mpc, MpcParty, Outgoing, ProtocolMessage, SinkExt};
@@ -249,12 +248,11 @@ mod tests {
     use crate::rounds::trace::PerfProfiler;
 
     use super::*;
-    use blueprint_test_utils::setup_log;
     use proptest::prelude::*;
     use rand::rngs::StdRng;
     use rand::seq::IteratorRandom;
     use rand::SeedableRng;
-    use round_based::simulation::Simulation;
+    use round_based::sim::Simulation;
     use test_strategy::proptest;
     use test_strategy::Arbitrary;
 
@@ -275,7 +273,6 @@ mod tests {
 
     #[proptest(async = "tokio", cases = 20, fork = true)]
     async fn it_works(case: TestCase) {
-        setup_log();
         match &case {
             TestCase::Ed25519(args) => run_signing::<frost_ed25519::Ed25519Sha512>(args).await?,
             TestCase::Secp256k1(args) => {
@@ -305,13 +302,11 @@ mod tests {
         let signer_set = signers.iter().map(|(i, _)| *i).collect::<Vec<_>>();
 
         eprintln!("Running a {} {t}-out-of-{n} Signing", C::ID);
-        let mut simulation = Simulation::<Msg<C>>::new();
-        let mut tasks = vec![];
+        let mut simulation = Simulation::<_, Msg<C>>::empty();
         for (i, (key_pkg, pub_key_pkg)) in signers {
-            let party = simulation.add_party();
             let signer_set = signer_set.clone();
             let msg = msg.to_vec();
-            let output = tokio::spawn(async move {
+            simulation.add_async_party(|party| async move {
                 let rng = &mut StdRng::seed_from_u64(u64::from(i + 1));
                 let mut tracer = PerfProfiler::new();
                 let output = run(
@@ -328,12 +323,12 @@ mod tests {
                 eprintln!("Party {} report: {}\n", i, report);
                 Result::<_, Error<C>>::Ok((i, output))
             });
-            tasks.push(output);
         }
 
-        let mut outputs = Vec::with_capacity(tasks.len());
+        let mut outputs = Vec::with_capacity(n as usize);
+        let tasks = simulation.run()?;
         for task in tasks {
-            outputs.push(task.await.unwrap());
+            outputs.push(task);
         }
         let outputs = outputs.into_iter().collect::<Result<BTreeMap<_, _>, _>>()?;
         // Assert that all parties produced a valid signature
@@ -360,11 +355,9 @@ mod tests {
         prop_assume!(frost_core::keys::validate_num_of_signers::<C>(t, n).is_ok());
 
         eprintln!("Running a {} {t}-out-of-{n} Keygen", C::ID);
-        let mut simulation = Simulation::<Msg<C>>::new();
-        let mut tasks = vec![];
+        let mut simulation = Simulation::<_, Msg<C>>::empty();
         for i in 0..n {
-            let party = simulation.add_party();
-            let output = tokio::spawn(async move {
+            simulation.add_async_party(|party| async move {
                 let rng = &mut StdRng::seed_from_u64(u64::from(i + 1));
                 let mut tracer = PerfProfiler::new();
                 let output = run(rng, t, n, i, party, Some(tracer.borrow_mut())).await?;
@@ -372,15 +365,15 @@ mod tests {
                 eprintln!("Party {} report: {}\n", i, report);
                 Result::<_, Error<C>>::Ok((i, output))
             });
-            tasks.push(output);
         }
 
-        let mut outputs = Vec::with_capacity(tasks.len());
+        let mut outputs = Vec::with_capacity(n as usize);
+        let tasks = simulation.run()?;
         for task in tasks {
-            outputs.push(task.await.unwrap());
+            outputs.push(task);
         }
         let outputs = outputs.into_iter().collect::<Result<BTreeMap<_, _>, _>>()?;
-        // Assert that all parties outputed the same public key
+        // Assert that all parties outputted the same public key
         let (_, pubkey_pkg) = outputs.get(&0).unwrap();
         for (_, other_pubkey_pkg) in outputs.values().skip(1) {
             prop_assert_eq!(pubkey_pkg, other_pubkey_pkg);

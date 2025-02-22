@@ -1,10 +1,10 @@
 use std::collections::BTreeMap;
 
+use blueprint_sdk::logging;
 use frost_core::keys::dkg::round2::Package as Round2Package;
 use frost_core::keys::{dkg, PublicKeyPackage};
 use frost_core::keys::{dkg::round1::Package as Round1Package, KeyPackage};
 use frost_core::{Ciphersuite, Group, Identifier};
-use gadget_sdk::random::rand;
 use round_based::rounds_router::simple_store::RoundInput;
 use round_based::rounds_router::RoundsRouter;
 use round_based::{Delivery, Mpc, MpcParty, Outgoing, ProtocolMessage, SinkExt};
@@ -97,7 +97,7 @@ where
         return Err(Bug::InvalidProtocolParameters.into());
     }
     tracer.protocol_begins();
-    gadget_sdk::debug!("Keygen protocol started");
+    logging::debug!("Keygen protocol started");
     let me = IdentifierWrapper::<C>::try_from(i).map_err(|_| Bug::InvalidPartyIndex)?;
     tracer.stage("Setup networking");
     let MpcParty { delivery, .. } = party.into_party();
@@ -107,26 +107,26 @@ where
     let round2 = router.add_round(RoundInput::<Round2Package<C>>::p2p(i, n));
     let mut rounds = router.listen(incomings);
     // Round 1
-    gadget_sdk::debug!("Round 1 started");
+    logging::debug!("Round 1 started");
     tracer.round_begins();
     tracer.stage("Generate Own Secret package");
     let (round1_secret_package, round1_package) =
         dkg::part1::<C, _>(*me, n, t, rng).map_err(KeygenAborted::Frost)?;
     tracer.stage("Broadcast shares");
-    gadget_sdk::debug!("Broadcasting round 1 package");
+    logging::debug!("Broadcasting round 1 package");
     tracer.send_msg();
     outgoings
         .send(Outgoing::broadcast(Msg::Round1(round1_package)))
         .await
         .map_err(IoError::send_message)?;
     tracer.msg_sent();
-    gadget_sdk::debug!("Waiting for round 1 packages");
+    logging::debug!("Waiting for round 1 packages");
     tracer.receive_msgs();
     let other_packages = rounds
         .complete(round1)
         .await
         .map_err(IoError::receive_message)?;
-    gadget_sdk::debug!("Received round 1 packages");
+    logging::debug!("Received round 1 packages");
     tracer.msgs_received();
     let round1_packages = other_packages
         .into_iter_indexed()
@@ -139,7 +139,7 @@ where
 
     // Round 2
     tracer.round_begins();
-    gadget_sdk::debug!("Round 2 started");
+    logging::debug!("Round 2 started");
     tracer.stage("Generate Round2 packages");
     let (round2_secret_package, my_round2_packages) =
         dkg::part2(round1_secret_package, &round1_packages).map_err(KeygenAborted::Frost)?;
@@ -148,7 +148,7 @@ where
         let _guard = span.enter();
         tracer.send_msg();
         let to = IdentifierWrapper(to).as_u16();
-        gadget_sdk::debug!(%to, "Sending to party");
+        logging::debug!(%to, "Sending to party");
         outgoings
             .send(Outgoing::p2p(to, Msg::Round2(round2_package)))
             .await
@@ -157,7 +157,7 @@ where
     }
     drop(span);
 
-    gadget_sdk::debug!("Waiting for round 2 packages");
+    logging::debug!("Waiting for round 2 packages");
     tracer.receive_msgs();
     let other_packages = rounds
         .complete(round2)
@@ -173,15 +173,15 @@ where
             Result::<_, Error<C>>::Ok((*party, package))
         })
         .collect::<Result<BTreeMap<Identifier<C>, _>, _>>()?;
-    gadget_sdk::debug!("Received round 2 packages");
+    logging::debug!("Received round 2 packages");
 
-    gadget_sdk::debug!("Part 3 started");
+    logging::debug!("Part 3 started");
     tracer.named_round_begins("Part 3 (Offline)");
     tracer.stage("Generate Key Package");
     let (key_package, public_key_package) =
         dkg::part3(&round2_secret_package, &round1_packages, &round2_packages)
             .map_err(KeygenAborted::Frost)?;
-    gadget_sdk::debug!("Keygen protocol completed");
+    logging::debug!("Keygen protocol completed");
     tracer.protocol_ends();
     Ok((key_package, public_key_package))
 }
@@ -193,11 +193,10 @@ mod tests {
     use crate::rounds::trace::PerfProfiler;
 
     use super::*;
-    use blueprint_test_utils::setup_log;
     use proptest::prelude::*;
     use rand::rngs::StdRng;
     use rand::SeedableRng;
-    use round_based::simulation::Simulation;
+    use round_based::sim::Simulation;
     use test_strategy::proptest;
     use test_strategy::Arbitrary;
 
@@ -217,7 +216,6 @@ mod tests {
 
     #[proptest(async = "tokio", cases = 20, fork = true)]
     async fn it_works(case: TestCase) {
-        setup_log();
         match &case {
             TestCase::Ed25519(args) => run_keygen::<frost_ed25519::Ed25519Sha512>(args).await?,
             TestCase::Secp256k1(args) => {
@@ -236,11 +234,9 @@ mod tests {
         prop_assume!(frost_core::keys::validate_num_of_signers::<C>(t, n).is_ok());
 
         eprintln!("Running a {} {t}-out-of-{n} Keygen", C::ID);
-        let mut simulation = Simulation::<Msg<C>>::new();
-        let mut tasks = vec![];
+        let mut simulation = Simulation::<_, Msg<C>>::empty();
         for i in 0..n {
-            let party = simulation.add_party();
-            let output = tokio::spawn(async move {
+            simulation.add_async_party(|party| async move {
                 let rng = &mut StdRng::seed_from_u64(u64::from(i + 1));
                 let mut tracer = PerfProfiler::new();
                 let output = run(rng, t, n, i, party, Some(tracer.borrow_mut())).await?;
@@ -248,18 +244,18 @@ mod tests {
                 eprintln!("Party {} report: {}\n", i, report);
                 Result::<_, Error<C>>::Ok(output)
             });
-            tasks.push(output);
         }
 
-        let mut outputs = Vec::with_capacity(tasks.len());
+        let mut outputs = Vec::with_capacity(n as usize);
+        let tasks = simulation.run()?;
         for task in tasks {
-            outputs.push(task.await.unwrap());
+            outputs.push(task);
         }
         let outputs = outputs.into_iter().collect::<Result<Vec<_>, _>>()?;
-        // Assert that all parties outputed the same public key
-        let (_, pubkey_pkg) = &outputs[0];
+        // Assert that all parties output the same public key
+        let (pubkey_pkg, _) = &outputs[0];
         for (_, other_pubkey_pkg) in outputs.iter().skip(1) {
-            prop_assert_eq!(pubkey_pkg, other_pubkey_pkg);
+            prop_assert_eq!(pubkey_pkg.verifying_key(), other_pubkey_pkg.verifying_key());
         }
 
         Ok(())

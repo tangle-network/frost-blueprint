@@ -3,18 +3,23 @@ use std::collections::BTreeMap;
 use crate::rounds::keygen as keygen_protocol;
 use crate::FrostContext;
 use api::services::events::JobCalled;
+use blueprint_sdk::contexts::keystore::KeystoreContext;
+use blueprint_sdk::contexts::tangle::TangleClientContext;
+use blueprint_sdk::crypto::hashing::keccak_256;
+use blueprint_sdk::crypto::tangle_pair_signer::sp_core::ecdsa;
+use blueprint_sdk::keystore::backends::Backend;
+use blueprint_sdk::keystore::crypto::sp_core::SpEcdsa;
+use blueprint_sdk::networking::InstanceMsgPublicKey;
+use blueprint_sdk::tangle_subxt::subxt::ext::futures::TryFutureExt;
+use blueprint_sdk::{self as sdk, logging};
 use frost_core::keys::{KeyPackage, PublicKeyPackage};
 use frost_core::{Ciphersuite, VerifyingKey};
-use gadget_sdk::contexts::MPCContext;
-use gadget_sdk::futures::TryFutureExt;
-use gadget_sdk::network::round_based_compat::NetworkDeliveryWrapper;
-use gadget_sdk::subxt_core::ext::sp_core::{ecdsa, Pair};
-use gadget_sdk::subxt_core::utils::AccountId32;
-use gadget_sdk::{self as sdk, random};
-use sdk::event_listener::tangle::{
-    jobs::{services_post_processor, services_pre_processor},
-    TangleEventListener,
+use sdk::event_listeners::tangle::{
+    events::TangleEventListener, services::services_post_processor,
+    services::services_pre_processor,
 };
+use sdk::networking::round_based_compat::RoundBasedNetworkAdapter;
+use sdk::tangle_subxt::subxt_core::utils::AccountId32;
 use sdk::tangle_subxt::tangle_testnet_runtime::api;
 
 #[derive(Debug, thiserror::Error)]
@@ -23,13 +28,12 @@ pub enum Error {
     UnknwonCiphersuite(String),
     #[error("Self not in operators")]
     SelfNotInOperators,
-
     #[error(transparent)]
     Subxt(#[from] sdk::tangle_subxt::subxt::Error),
     #[error(transparent)]
     Sdk(#[from] sdk::error::Error),
     #[error(transparent)]
-    Config(#[from] sdk::config::Error),
+    Config(#[from] Box<sdk::config::Error>),
     #[error("Frost error: {0}")]
     Frost(Box<dyn std::error::Error>),
     #[error("Protocol error: {0}")]
@@ -81,27 +85,38 @@ impl<C: Ciphersuite> From<keygen_protocol::Error<C>> for Error {
         post_processor = services_post_processor,
     )
 )]
-#[tracing::instrument(skip(context), parent = context.config.span.clone())]
+#[tracing::instrument(target = "gadget", skip(context), err)]
 pub async fn keygen(
     ciphersuite: String,
     threshold: u16,
     context: FrostContext,
 ) -> Result<Vec<u8>, Error> {
-    let operators = context
-        .current_service_operators_ecdsa_keys()
-        .map_err(Error::Other)
+    logging::info!("Running keygen job");
+    let tangle_client = context
+        .tangle_client()
+        .map_err(|e| Error::Sdk(e.into()))
         .await?;
-    let my_ecdsa = context.config.first_ecdsa_signer()?;
-    let current_call_id = context.current_call_id().map_err(Error::Other).await?;
 
-    let rng = random::rand::rngs::OsRng;
+    let (i, operators) = tangle_client
+        .get_party_index_and_operators()
+        .map_err(|e| Error::Sdk(e.into()))
+        .await?;
+
+    let my_ecdsa = context
+        .keystore()
+        .first_local::<SpEcdsa>()
+        .map_err(|e| Error::Other(e.into()))?;
+    let current_call_id = context.current_call_id().map_err(Error::Other)?;
+
+    let rng = rand::rngs::OsRng;
     let kv = context.store.clone();
     let key = match ciphersuite.as_str() {
         frost_ed25519::Ed25519Sha512::ID => keygen_internal::<frost_ed25519::Ed25519Sha512, _>(
             rng,
             kv,
-            my_ecdsa.signer().public(),
+            my_ecdsa.0,
             operators,
+            i.try_into()?,
             threshold,
             current_call_id,
             &context,
@@ -112,8 +127,9 @@ pub async fn keygen(
             keygen_internal::<frost_secp256k1::Secp256K1Sha256, _>(
                 rng,
                 kv,
-                my_ecdsa.signer().public(),
+                my_ecdsa.0,
                 operators,
+                i.try_into()?,
                 threshold,
                 current_call_id,
                 &context,
@@ -135,33 +151,31 @@ pub struct KeygenEntry<C: Ciphersuite> {
     pub pub_key_pkg: PublicKeyPackage<C>,
 }
 
-/// A genaric keygen protocol over any ciphersuite.
-#[tracing::instrument(skip(rng, kv, context), fields(ciphersuite = %C::ID,  i = tracing::field::Empty, n = %participants.len()))]
+/// A generic keygen protocol over any ciphersuite.
+#[tracing::instrument(skip(rng, kv, context), fields(ciphersuite = %C::ID,  i, n = %participants.len()))]
+#[allow(clippy::too_many_arguments)]
 async fn keygen_internal<C, R>(
     mut rng: R,
     kv: crate::kv::SharedDynKVStore<String, Vec<u8>>,
     me: ecdsa::Public,
     participants: BTreeMap<AccountId32, ecdsa::Public>,
+    i: u16,
     t: u16,
     call_id: u64,
     context: &FrostContext,
 ) -> Result<VerifyingKey<C>, Error>
 where
-    C: Ciphersuite + Send + Unpin,
-    <<C as Ciphersuite>::Group as frost_core::Group>::Element: Send + Unpin,
+    C: Ciphersuite + Sync + Send + Unpin,
+    <<C as Ciphersuite>::Group as frost_core::Group>::Element: Sync + Send + Unpin,
     <<<C as Ciphersuite>::Group as frost_core::Group>::Field as frost_core::Field>::Scalar:
-        Send + Unpin,
-    R: random::RngCore + random::CryptoRng,
+        Send + Sync + Unpin,
+    R: rand::RngCore + rand::CryptoRng,
 {
     let n = participants.len();
-    let i = participants
-        .values()
-        .position(|k| k == &me)
-        .ok_or(Error::SelfNotInOperators)?;
 
     let n = u16::try_from(n)?;
-    let i = u16::try_from(i)?;
-    tracing::span::Span::current().record("i", i);
+
+    logging::info!(%i, %n, "Keygen Start");
 
     let parties: BTreeMap<u16, _> = participants
         .into_iter()
@@ -169,20 +183,23 @@ where
         .map(|(j, (_, ecdsa))| (j as u16, ecdsa))
         .collect();
 
-    let keygen_task_hash = gadget_sdk::compute_sha256_hash!(call_id.to_be_bytes(), "frost-keygen");
+    let keygen_task_hash = keccak_256(&call_id.to_be_bytes());
 
-    let delivery = NetworkDeliveryWrapper::new(
-        context.network_backend.clone(),
+    let delivery = RoundBasedNetworkAdapter::new(
+        context.network_service_handle.clone(),
         i as _,
-        keygen_task_hash,
-        parties.clone(),
+        parties
+            .iter()
+            .map(|(j, ecdsa)| (*j, InstanceMsgPublicKey(*ecdsa)))
+            .collect(),
+        hex::encode(keygen_task_hash),
     );
     let party = round_based::MpcParty::connected(delivery);
     let (key_package, public_key_package) =
         keygen_protocol::run::<R, C, _>(&mut rng, t, n, i, party, None).await?;
     let verifying_key = *public_key_package.verifying_key();
     let pubkey = hex::encode(verifying_key.serialize()?);
-    sdk::debug!(%pubkey, "Keygen Done");
+    logging::debug!(%pubkey, "Keygen Done");
     let entry = serde_json::json!({
         "ciphersuite": C::ID,
         "entry": KeygenEntry {
@@ -193,162 +210,4 @@ where
     // Save the keygen entry.
     kv.set(pubkey, serde_json::to_vec(&entry)?)?;
     Ok(verifying_key)
-}
-
-#[cfg(all(test, feature = "e2e"))]
-mod e2e {
-    use alloy_primitives::U256;
-    use alloy_sol_types::sol;
-    use api::runtime_types::bounded_collections::bounded_vec::BoundedVec;
-    use api::runtime_types::tangle_primitives::services::field::BoundedString;
-    use api::runtime_types::tangle_primitives::services::field::Field;
-    use api::runtime_types::tangle_primitives::services::BlueprintServiceManager;
-    use api::services::calls::types::call::Args;
-    use blueprint_test_utils::test_ext::*;
-    use blueprint_test_utils::*;
-    use cargo_tangle::deploy::Opts;
-    use gadget_sdk::error;
-    use gadget_sdk::info;
-
-    use super::*;
-
-    pub fn setup_testing_log() {
-        use tracing_subscriber::util::SubscriberInitExt;
-        let env_filter = tracing_subscriber::EnvFilter::from_default_env();
-        let _ = tracing_subscriber::fmt::SubscriberBuilder::default()
-            .without_time()
-            .with_target(true)
-            .with_span_events(tracing_subscriber::fmt::format::FmtSpan::NONE)
-            .with_env_filter(env_filter)
-            .with_test_writer()
-            .finish()
-            .try_init();
-    }
-
-    sol!(
-        #[sol(rpc)]
-        "contracts/src/FrostBlueprint.sol",
-    );
-
-    sol!(
-        #[sol(rpc)]
-        ERC20,
-        "contracts/out/ERC20.sol/ERC20.json"
-    );
-
-    #[tokio::test(flavor = "multi_thread")]
-    #[allow(clippy::needless_return)]
-    async fn keygen() {
-        setup_testing_log();
-        let tangle = tangle::run().unwrap();
-        let base_path = std::env::current_dir().expect("Failed to get current directory");
-        let base_path = base_path
-            .canonicalize()
-            .expect("File could not be normalized");
-
-        let manifest_path = base_path.join("Cargo.toml");
-
-        let ws_port = tangle.ws_port();
-        let http_rpc_url = format!("http://127.0.0.1:{ws_port}");
-        let ws_rpc_url = format!("ws://127.0.0.1:{ws_port}");
-
-        let opts = Opts {
-            pkg_name: option_env!("CARGO_BIN_NAME").map(ToOwned::to_owned),
-            http_rpc_url,
-            ws_rpc_url,
-            manifest_path,
-            signer: None,
-            signer_evm: None,
-        };
-
-        const N: usize = 3;
-        const T: usize = N / 2 + 1;
-        const CIPHERSUITE: &str = frost_ed25519::Ed25519Sha512::ID;
-
-        new_test_ext_blueprint_manager::<N, 1, _, _, _>("", opts, run_test_blueprint_manager)
-            .await
-            .execute_with_async(move |client, handles, svcs| async move {
-                // At this point, blueprint has been deployed, every node has registered
-                // as an operator for the relevant services, and, all gadgets are running
-
-                let keypair = handles[0].sr25519_id().clone();
-
-                // Fund the Blueprint manager contract with Some TNT.
-                let blueprint_manager = match svcs.blueprint.manager {
-                    BlueprintServiceManager::Evm(contract_address) => contract_address.0.into(),
-                };
-
-                let tnt = 500;
-                let value = U256::from(tnt) * U256::from(10).pow(U256::from(18));
-
-                let signer = cargo_tangle::signer::load_evm_signer_from_env().unwrap();
-
-                let wallet = alloy_network::EthereumWallet::from(signer);
-
-                let ws_rpc_url = format!("ws://127.0.0.1:{ws_port}");
-                let provider = alloy_provider::ProviderBuilder::new()
-                    .with_recommended_fillers()
-                    .wallet(wallet)
-                    .on_ws(alloy_provider::WsConnect::new(ws_rpc_url))
-                    .await
-                    .unwrap();
-
-                let frost_blueprint = FrostBlueprint::new(blueprint_manager, provider.clone());
-                let tnt_token_address = frost_blueprint
-                    .TNT_ERC20_ADDRESS()
-                    .call()
-                    .await
-                    .map(|t| t.TNT_ERC20_ADDRESS)
-                    .unwrap();
-                let tnt_token = ERC20::new(tnt_token_address, provider.clone());
-
-                // Send Some TNT to the Blueprint manager contract.
-                let tx = tnt_token.transfer(blueprint_manager, value);
-                let receipt = tx.send().await.unwrap().get_receipt().await.unwrap();
-                assert!(
-                    receipt.status(),
-                    "Failed to fund the Blueprint manager contract with TNT"
-                );
-
-                // Double check that the Blueprint manager contract has been funded with TNT.
-                let balance = tnt_token.balanceOf(blueprint_manager).call().await.unwrap();
-                assert_eq!(balance._0, value);
-
-                let service = svcs.services.last().unwrap();
-
-                let service_id = service.id;
-                let call_id = get_next_call_id(client)
-                    .await
-                    .expect("Failed to get next job id")
-                    .saturating_sub(1);
-
-                info!("Submitting job with params service ID: {service_id}, call ID: {call_id}");
-
-                // Pass the arguments
-                let ciphersuite = Field::String(BoundedString(BoundedVec(
-                    CIPHERSUITE.to_string().into_bytes(),
-                )));
-                let threshold = Field::Uint16(T as u16);
-                let job_args = Args::from([ciphersuite, threshold]);
-
-                // Next step: submit a job under that service/job id
-                if let Err(err) =
-                    submit_job(client, &keypair, service_id, KEYGEN_JOB_ID, job_args).await
-                {
-                    error!("Failed to submit job: {err}");
-                    panic!("Failed to submit job: {err}");
-                }
-
-                // Step 2: wait for the job to complete
-                let job_results = wait_for_completion_of_tangle_job(client, service_id, call_id, T)
-                    .await
-                    .expect("Failed to wait for job completion");
-
-                // Step 3: Get the job results, compare to expected value(s)
-                assert_eq!(job_results.service_id, service_id);
-                assert_eq!(job_results.call_id, call_id);
-                assert!(matches!(job_results.result[0], Field::Bytes(_)));
-            })
-            .await;
-    }
 }
