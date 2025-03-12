@@ -1,26 +1,22 @@
 use crate::rounds::sign as sign_protocol;
-use api::services::events::JobCalled;
-use blueprint_sdk::contexts::keystore::KeystoreContext;
-use blueprint_sdk::contexts::tangle::TangleClientContext;
-use blueprint_sdk::crypto::hashing::keccak_256;
-use blueprint_sdk::crypto::tangle_pair_signer::sp_core::ecdsa;
-use blueprint_sdk::keystore::backends::Backend;
-use blueprint_sdk::keystore::crypto::sp_core::SpEcdsa;
-use blueprint_sdk::networking::round_based_compat::RoundBasedNetworkAdapter;
-use blueprint_sdk::networking::InstanceMsgPublicKey;
-use blueprint_sdk::tangle_subxt::subxt::utils::AccountId32;
-use blueprint_sdk::{self as sdk, logging};
+use blueprint_sdk as sdk;
 use color_eyre::eyre;
 use frost_core::keys::{KeyPackage, PublicKeyPackage};
 use frost_core::{Ciphersuite, Signature};
 use futures::TryFutureExt;
-use rand::seq::IteratorRandom;
 use rand::SeedableRng;
-use sdk::event_listeners::tangle::{
-    events::TangleEventListener,
-    services::{services_post_processor, services_pre_processor},
-};
-use sdk::tangle_subxt::tangle_testnet_runtime::api;
+use rand::seq::IteratorRandom;
+use sdk::contexts::tangle::TangleClientContext;
+use sdk::crypto::hashing::keccak_256;
+use sdk::crypto::sp_core::SpEcdsaPublic;
+use sdk::crypto::tangle_pair_signer::sp_core::ecdsa;
+use sdk::extract::Context;
+use sdk::keystore::backends::Backend;
+use sdk::keystore::crypto::sp_core::SpEcdsa;
+use sdk::networking::discovery::peers::VerificationIdentifierKey;
+use sdk::networking::round_based_compat::RoundBasedNetworkAdapter;
+use sdk::tangle::extract::{CallId, List, TangleArgs2, TangleResult};
+use sdk::tangle_subxt::subxt::utils::AccountId32;
 use std::collections::BTreeMap;
 
 use crate::FrostContext;
@@ -43,12 +39,10 @@ pub enum Error {
     Sdk(#[from] sdk::error::Error),
     #[error(transparent)]
     Json(#[from] serde_json::Error),
-    #[error(transparent)]
-    Config(#[from] Box<sdk::config::Error>),
     #[error("Protocol error: {0}")]
-    Protocol(Box<dyn std::error::Error>),
+    Protocol(String),
     #[error("Frost error: {0}")]
-    Frost(Box<dyn std::error::Error>),
+    Frost(String),
     #[error(transparent)]
     ToUnsigned16(#[from] std::num::TryFromIntError),
     #[error(transparent)]
@@ -59,13 +53,13 @@ pub enum Error {
 
 impl<C: Ciphersuite> From<frost_core::Error<C>> for Error {
     fn from(e: frost_core::Error<C>) -> Self {
-        Error::Frost(Box::new(e))
+        Error::Frost(e.to_string())
     }
 }
 
 impl<C: Ciphersuite> From<sign_protocol::Error<C>> for Error {
     fn from(e: sign_protocol::Error<C>) -> Self {
-        Error::Protocol(Box::new(e))
+        Error::Protocol(e.to_string())
     }
 }
 
@@ -80,18 +74,12 @@ impl<C: Ciphersuite> From<sign_protocol::Error<C>> for Error {
 ///
 /// # Errors
 /// - `KeyNotFound`: If the secret share for the key is not found.
-#[sdk::job(
-    id = 1,
-    params(pubkey, msg),
-    result(_),
-    event_listener(
-        listener = TangleEventListener::<FrostContext, JobCalled>,
-        pre_processor = services_pre_processor,
-        post_processor = services_post_processor,
-    )
-)]
 #[tracing::instrument(skip_all, err)]
-pub async fn sign(pubkey: Vec<u8>, msg: Vec<u8>, context: FrostContext) -> Result<Vec<u8>, Error> {
+pub async fn sign(
+    CallId(current_call_id): CallId,
+    Context(context): Context<FrostContext>,
+    TangleArgs2(List(pubkey), List(msg)): TangleArgs2<List<u8>, List<u8>>,
+) -> Result<TangleResult<List<u8>>, Error> {
     let pubkey_hex = hex::encode(&pubkey);
     let kv = context.store.clone();
     let raw_info = kv.get(&pubkey_hex)?.ok_or(Error::KeyNotFound)?;
@@ -105,16 +93,16 @@ pub async fn sign(pubkey: Vec<u8>, msg: Vec<u8>, context: FrostContext) -> Resul
         .map_err(|e| Error::Sdk(e.into()))
         .await?;
 
-    let (i, operators) = tangle_client
+    let (_, operators) = tangle_client
         .get_party_index_and_operators()
         .map_err(|e| Error::Sdk(e.into()))
         .await?;
 
     let my_ecdsa = context
+        .config
         .keystore()
         .first_local::<SpEcdsa>()
         .map_err(|e| Error::Other(e.into()))?;
-    let current_call_id = context.current_call_id().map_err(Error::Other)?;
 
     let rng = rand::rngs::OsRng;
 
@@ -155,20 +143,18 @@ pub async fn sign(pubkey: Vec<u8>, msg: Vec<u8>, context: FrostContext) -> Resul
     };
 
     match res {
-        Ok(Some(signature)) => Ok(signature),
+        Ok(Some(signature)) => Ok(TangleResult(signature.into())),
         Err(Error::SelfNotInSigners) => {
             // This is a special case where the signer is not in the signers list.
             // This is a valid case, as the signer is not required to be in the signers list.
-            Err(Error::Other(eyre::eyre!(
-                "Self not in signers list, this is a valid case"
-            )))
+            Err(Error::SelfNotInSigners)
         }
         Ok(None) => Err(Error::Other(eyre::eyre!("Signature serialization failed"))),
         Err(e) => Err(e),
     }
 }
 
-/// A genaric signing protocol over a given ciphersuite.
+/// A generic signing protocol over a given ciphersuite.
 #[tracing::instrument(skip(rng, key_pkg, pub_key_pkg, msg, context))]
 #[allow(clippy::too_many_arguments)]
 async fn signing_internal<C, R>(
@@ -232,7 +218,12 @@ where
         i,
         selected_parties
             .iter()
-            .map(|(j, ecdsa)| (*j, InstanceMsgPublicKey(*ecdsa)))
+            .map(|(j, ecdsa)| {
+                (
+                    *j,
+                    VerificationIdentifierKey::InstancePublicKey(SpEcdsaPublic(*ecdsa)),
+                )
+            })
             .collect(),
         hex::encode(signing_task_hash),
     );
@@ -249,7 +240,7 @@ where
     )
     .await?;
 
-    logging::debug!(
+    sdk::debug!(
         pubkey = %hex::encode(pub_key),
         signature = %hex::encode(signature.serialize()?),
         msg = %hex::encode(&msg),

@@ -1,13 +1,13 @@
 use std::collections::BTreeMap;
 
 use frost_core::keys::{KeyPackage, PublicKeyPackage};
-use frost_core::round1::{commit, SigningCommitments};
-use frost_core::round2::{sign, SignatureShare};
+use frost_core::round1::{SigningCommitments, commit};
+use frost_core::round2::{SignatureShare, sign};
 use frost_core::{
-    aggregate, verify_signature_share, Ciphersuite, Group, Identifier, Signature, SigningPackage,
+    Ciphersuite, Group, Identifier, Signature, SigningPackage, aggregate, verify_signature_share,
 };
-use round_based::rounds_router::simple_store::RoundInput;
 use round_based::rounds_router::RoundsRouter;
+use round_based::rounds_router::simple_store::RoundInput;
 use round_based::{Delivery, Mpc, MpcParty, Outgoing, ProtocolMessage, SinkExt};
 use serde::{Deserialize, Serialize};
 
@@ -249,12 +249,12 @@ mod tests {
 
     use super::*;
     use proptest::prelude::*;
+    use rand::SeedableRng;
     use rand::rngs::StdRng;
     use rand::seq::IteratorRandom;
-    use rand::SeedableRng;
     use round_based::sim::Simulation;
-    use test_strategy::proptest;
     use test_strategy::Arbitrary;
+    use test_strategy::proptest;
 
     #[derive(Arbitrary, Debug, Clone, Copy)]
     struct TestInputArgs {

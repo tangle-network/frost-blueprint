@@ -1,26 +1,22 @@
 use std::collections::BTreeMap;
 
-use crate::rounds::keygen as keygen_protocol;
 use crate::FrostContext;
-use api::services::events::JobCalled;
-use blueprint_sdk::contexts::keystore::KeystoreContext;
-use blueprint_sdk::contexts::tangle::TangleClientContext;
-use blueprint_sdk::crypto::hashing::keccak_256;
-use blueprint_sdk::crypto::tangle_pair_signer::sp_core::ecdsa;
-use blueprint_sdk::keystore::backends::Backend;
-use blueprint_sdk::keystore::crypto::sp_core::SpEcdsa;
-use blueprint_sdk::networking::InstanceMsgPublicKey;
-use blueprint_sdk::tangle_subxt::subxt::ext::futures::TryFutureExt;
-use blueprint_sdk::{self as sdk, logging};
+use crate::rounds::keygen as keygen_protocol;
+use blueprint_sdk as sdk;
 use frost_core::keys::{KeyPackage, PublicKeyPackage};
 use frost_core::{Ciphersuite, VerifyingKey};
-use sdk::event_listeners::tangle::{
-    events::TangleEventListener, services::services_post_processor,
-    services::services_pre_processor,
-};
+use futures::TryFutureExt;
+use sdk::contexts::tangle::TangleClientContext;
+use sdk::crypto::hashing::keccak_256;
+use sdk::crypto::sp_core::SpEcdsaPublic;
+use sdk::crypto::tangle_pair_signer::sp_core::ecdsa;
+use sdk::extract::Context;
+use sdk::keystore::backends::Backend;
+use sdk::keystore::crypto::sp_core::SpEcdsa;
+use sdk::networking::discovery::peers::VerificationIdentifierKey;
 use sdk::networking::round_based_compat::RoundBasedNetworkAdapter;
+use sdk::tangle::extract::{CallId, List, TangleArgs2, TangleResult};
 use sdk::tangle_subxt::subxt_core::utils::AccountId32;
-use sdk::tangle_subxt::tangle_testnet_runtime::api;
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
@@ -32,12 +28,10 @@ pub enum Error {
     Subxt(#[from] sdk::tangle_subxt::subxt::Error),
     #[error(transparent)]
     Sdk(#[from] sdk::error::Error),
-    #[error(transparent)]
-    Config(#[from] Box<sdk::config::Error>),
     #[error("Frost error: {0}")]
-    Frost(Box<dyn std::error::Error>),
+    Frost(String),
     #[error("Protocol error: {0}")]
-    Protocol(Box<dyn std::error::Error>),
+    Protocol(String),
     #[error(transparent)]
     SerdeJson(#[from] serde_json::Error),
     #[error(transparent)]
@@ -50,13 +44,13 @@ pub enum Error {
 
 impl<C: Ciphersuite> From<frost_core::Error<C>> for Error {
     fn from(e: frost_core::Error<C>) -> Self {
-        Error::Frost(Box::new(e))
+        Error::Frost(e.to_string())
     }
 }
 
 impl<C: Ciphersuite> From<keygen_protocol::Error<C>> for Error {
     fn from(e: keygen_protocol::Error<C>) -> Self {
-        Error::Protocol(Box::new(e))
+        Error::Protocol(e.to_string())
     }
 }
 
@@ -75,23 +69,13 @@ impl<C: Ciphersuite> From<keygen_protocol::Error<C>> for Error {
 /// # Note
 /// - `ciphersuite`: The `ID` of the ciphersuite; oneof [`FROST-ED25519-SHA512-v1`, `FROST-secp256k1-SHA256-v1`].
 /// - `threshold`: The threshold of the keygen protocol should be less than the number of operators.
-#[sdk::job(
-    id = 0,
-    params(ciphersuite, threshold),
-    result(_),
-    event_listener(
-        listener = TangleEventListener::<FrostContext, JobCalled>,
-        pre_processor = services_pre_processor,
-        post_processor = services_post_processor,
-    )
-)]
 #[tracing::instrument(target = "gadget", skip(context), err)]
 pub async fn keygen(
-    ciphersuite: String,
-    threshold: u16,
-    context: FrostContext,
-) -> Result<Vec<u8>, Error> {
-    logging::info!("Running keygen job");
+    CallId(current_call_id): CallId,
+    Context(context): Context<FrostContext>,
+    TangleArgs2(ciphersuite, threshold): TangleArgs2<String, u16>,
+) -> Result<TangleResult<List<u8>>, Error> {
+    sdk::info!("Running keygen job");
     let tangle_client = context
         .tangle_client()
         .map_err(|e| Error::Sdk(e.into()))
@@ -103,10 +87,10 @@ pub async fn keygen(
         .await?;
 
     let my_ecdsa = context
+        .config
         .keystore()
         .first_local::<SpEcdsa>()
         .map_err(|e| Error::Other(e.into()))?;
-    let current_call_id = context.current_call_id().map_err(Error::Other)?;
 
     let rng = rand::rngs::OsRng;
     let kv = context.store.clone();
@@ -140,7 +124,7 @@ pub async fn keygen(
         _ => return Err(Error::UnknwonCiphersuite(ciphersuite)),
     };
 
-    Ok(key)
+    Ok(TangleResult(key.into()))
 }
 
 /// A KeygenEntry to store the keygen result.
@@ -175,7 +159,7 @@ where
 
     let n = u16::try_from(n)?;
 
-    logging::info!(%i, %n, "Keygen Start");
+    sdk::info!(%i, %n, "Keygen Start");
 
     let parties: BTreeMap<u16, _> = participants
         .into_iter()
@@ -190,7 +174,12 @@ where
         i as _,
         parties
             .iter()
-            .map(|(j, ecdsa)| (*j, InstanceMsgPublicKey(*ecdsa)))
+            .map(|(j, ecdsa)| {
+                (
+                    *j,
+                    VerificationIdentifierKey::InstancePublicKey(SpEcdsaPublic(*ecdsa)),
+                )
+            })
             .collect(),
         hex::encode(keygen_task_hash),
     );
@@ -199,7 +188,7 @@ where
         keygen_protocol::run::<R, C, _>(&mut rng, t, n, i, party, None).await?;
     let verifying_key = *public_key_package.verifying_key();
     let pubkey = hex::encode(verifying_key.serialize()?);
-    logging::debug!(%pubkey, "Keygen Done");
+    sdk::debug!(%pubkey, "Keygen Done");
     let entry = serde_json::json!({
         "ciphersuite": C::ID,
         "entry": KeygenEntry {
