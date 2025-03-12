@@ -1,0 +1,42 @@
+[package]
+name = "frost-blueprint-cli"
+description = "FROST Blueprint CLI built using Tangle Blueprint SDK"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+homepage.workspace = true
+repository.workspace = true
+readme.workspace = true
+categories.workspace = true
+keywords.workspace = true
+publish = false
+
+[dependencies]
+tracing.workspace = true
+color-eyre = { workspace = true, features = ["tracing-error", "color-spantrace"] }
+tokio = { workspace = true, default-features = false, features = ["full", "rt-multi-thread"] }
+tracing-subscriber = { workspace = true, features = ["parking_lot", "env-filter"] }
+
+frost-blueprint.workspace = true
+blueprint-sdk = { workspace = true, features = ["tangle"] }
+tower.workspace = true
+
+[build-dependencies]
+blueprint-sdk = { workspace = true, features = ["macros", "build"] }
+frost-blueprint.workspace = true
+
+[features]
+default = ["std", "kv-sled"]
+std = ["blueprint-sdk/std", "frost-blueprint/std"]
+kv-sled = ["frost-blueprint/kv-sled"]
+kv-mem = ["frost-blueprint/kv-mem"]
+
+[[package.metadata.gadget.Native.sources]]
+owner = "tangle-network"
+repo = "frost-blueprint"
+tag = "0.3.0"
+binaries = [
+  { arch = "Amd64", os = "Linux", name = "amd64-linux-frost-blueprint-cli" },
+  { arch = "Arm64", os = "Linux", name = "arm64-linux-frost-blueprint-cli" },
+]
