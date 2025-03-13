@@ -25,6 +25,7 @@ tower.workspace = true
 [build-dependencies]
 blueprint-sdk = { workspace = true, features = ["macros", "build"] }
 frost-blueprint.workspace = true
+serde_json.workspace = true
 
 [features]
 default = ["std", "kv-sled"]

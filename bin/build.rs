@@ -4,13 +4,13 @@ use frost_blueprint::{keygen, sign};
 use std::path::Path;
 use std::process;
 
-fn main() {
+fn main() -> Result<(), Box<dyn std::error::Error>> {
     let contract_dirs: Vec<&str> = vec!["../contracts"];
     build::utils::soldeer_install();
     build::utils::soldeer_update();
     build::utils::build_contracts(contract_dirs);
 
-    println!("cargo::rerun-if-changed=../bin");
+    println!("cargo::rerun-if-changed=../src");
 
     let blueprint = blueprint! {
         name: "frost-blueprint",
@@ -21,16 +21,14 @@ fn main() {
 
     match blueprint {
         Ok(blueprint) => {
-            // TODO: Should be a helper function probably
-            let json = blueprint_sdk::tangle::metadata::macros::ext::serde_json::to_string_pretty(
-                &blueprint,
-            )
-            .unwrap();
-            std::fs::write(Path::new("../").join("blueprint.json"), json.as_bytes()).unwrap();
+            let json = serde_json::to_string_pretty(&blueprint)?;
+            std::fs::write(Path::new("../").join("blueprint.json"), json.as_bytes())?;
         }
         Err(e) => {
             println!("cargo::error={e:?}");
             process::exit(1);
         }
     }
+
+    Ok(())
 }
