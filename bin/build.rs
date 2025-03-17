@@ -11,6 +11,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     build::utils::build_contracts(contract_dirs);
 
     println!("cargo::rerun-if-changed=../src");
+    println!("cargo::rerun-if-changed=./src");
 
     let blueprint = blueprint! {
         name: "frost-blueprint",

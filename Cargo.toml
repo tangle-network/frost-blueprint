@@ -125,7 +125,7 @@ sled = { version = "0.34", default-features = false }
 round-based = { version = "0.4.1", default-features = false, features = ["derive"] }
 crossbeam-channel = { version = "0.5", default-features = false }
 
-blueprint-sdk = { git = "https://github.com/tangle-network/blueprint", default-features = false }
+blueprint-sdk = { git = "https://github.com/tangle-network/blueprint", default-features = false, branch = "serial/per-node-context" }
 tower = { version = "0.5.2", default-features = false }
 
 # The profile that 'dist' will build with
