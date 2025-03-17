@@ -10,7 +10,6 @@ repository.workspace = true
 readme.workspace = true
 categories.workspace = true
 keywords.workspace = true
-publish = false
 
 [dependencies]
 tracing.workspace = true
