@@ -2379,7 +2379,7 @@ dependencies = [
 [[package]]
 name = "blueprint-build-utils"
 version = "0.1.0"
-source = "git+https://github.com/tangle-network/blueprint?branch=serial%2Fper-node-context#865ad517b2d38035a6e449dffe71913b2b41c049"
+source = "git+https://github.com/tangle-network/blueprint#5e1c7d85b548d04e7133e87c87337dc554fa779e"
 dependencies = [
  "gadget-std",
 ]
@@ -2387,7 +2387,7 @@ dependencies = [
 [[package]]
 name = "blueprint-core"
 version = "0.1.0"
-source = "git+https://github.com/tangle-network/blueprint?branch=serial%2Fper-node-context#865ad517b2d38035a6e449dffe71913b2b41c049"
+source = "git+https://github.com/tangle-network/blueprint#5e1c7d85b548d04e7133e87c87337dc554fa779e"
 dependencies = [
  "bytes",
  "futures-util",
@@ -2401,7 +2401,7 @@ dependencies = [
 [[package]]
 name = "blueprint-evm-extra"
 version = "0.1.0"
-source = "git+https://github.com/tangle-network/blueprint?branch=serial%2Fper-node-context#865ad517b2d38035a6e449dffe71913b2b41c049"
+source = "git+https://github.com/tangle-network/blueprint#5e1c7d85b548d04e7133e87c87337dc554fa779e"
 dependencies = [
  "alloy-consensus",
  "alloy-network",
@@ -2432,7 +2432,7 @@ dependencies = [
 [[package]]
 name = "blueprint-macros"
 version = "0.1.0"
-source = "git+https://github.com/tangle-network/blueprint?branch=serial%2Fper-node-context#865ad517b2d38035a6e449dffe71913b2b41c049"
+source = "git+https://github.com/tangle-network/blueprint#5e1c7d85b548d04e7133e87c87337dc554fa779e"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -2442,7 +2442,7 @@ dependencies = [
 [[package]]
 name = "blueprint-producers-extra"
 version = "0.1.0"
-source = "git+https://github.com/tangle-network/blueprint?branch=serial%2Fper-node-context#865ad517b2d38035a6e449dffe71913b2b41c049"
+source = "git+https://github.com/tangle-network/blueprint#5e1c7d85b548d04e7133e87c87337dc554fa779e"
 dependencies = [
  "blueprint-core",
  "document-features",
@@ -2452,7 +2452,7 @@ dependencies = [
 [[package]]
 name = "blueprint-router"
 version = "0.1.0"
-source = "git+https://github.com/tangle-network/blueprint?branch=serial%2Fper-node-context#865ad517b2d38035a6e449dffe71913b2b41c049"
+source = "git+https://github.com/tangle-network/blueprint#5e1c7d85b548d04e7133e87c87337dc554fa779e"
 dependencies = [
  "blueprint-core",
  "bytes",
@@ -2466,7 +2466,7 @@ dependencies = [
 [[package]]
 name = "blueprint-runner"
 version = "0.1.0"
-source = "git+https://github.com/tangle-network/blueprint?branch=serial%2Fper-node-context#865ad517b2d38035a6e449dffe71913b2b41c049"
+source = "git+https://github.com/tangle-network/blueprint#5e1c7d85b548d04e7133e87c87337dc554fa779e"
 dependencies = [
  "blueprint-core",
  "blueprint-router",
@@ -2496,7 +2496,7 @@ dependencies = [
 [[package]]
 name = "blueprint-sdk"
 version = "0.1.0"
-source = "git+https://github.com/tangle-network/blueprint?branch=serial%2Fper-node-context#865ad517b2d38035a6e449dffe71913b2b41c049"
+source = "git+https://github.com/tangle-network/blueprint#5e1c7d85b548d04e7133e87c87337dc554fa779e"
 dependencies = [
  "blueprint-build-utils",
  "blueprint-core",
@@ -2529,7 +2529,7 @@ dependencies = [
 [[package]]
 name = "blueprint-tangle-extra"
 version = "0.1.0"
-source = "git+https://github.com/tangle-network/blueprint?branch=serial%2Fper-node-context#865ad517b2d38035a6e449dffe71913b2b41c049"
+source = "git+https://github.com/tangle-network/blueprint#5e1c7d85b548d04e7133e87c87337dc554fa779e"
 dependencies = [
  "blueprint-core",
  "bytes",
@@ -3055,7 +3055,7 @@ dependencies = [
 [[package]]
 name = "cargo-tangle"
 version = "0.1.0"
-source = "git+https://github.com/tangle-network/blueprint?branch=serial%2Fper-node-context#865ad517b2d38035a6e449dffe71913b2b41c049"
+source = "git+https://github.com/tangle-network/blueprint#5e1c7d85b548d04e7133e87c87337dc554fa779e"
 dependencies = [
  "alloy-contract",
  "alloy-json-abi",
@@ -6091,7 +6091,6 @@ dependencies = [
 name = "frost-blueprint"
 version = "0.3.0"
 dependencies = [
- "async-trait",
  "blueprint-sdk",
  "color-eyre",
  "crossbeam-channel",
@@ -6101,7 +6100,6 @@ dependencies = [
  "frost-secp256k1",
  "futures",
  "hex",
- "k256",
  "proptest",
  "rand 0.8.5",
  "rand_chacha 0.3.1",
@@ -6112,9 +6110,7 @@ dependencies = [
  "test-strategy",
  "thiserror 2.0.12",
  "tokio",
- "tokio-stream",
  "tracing",
- "tracing-subscriber 0.3.19",
 ]
 
 [[package]]
@@ -6126,7 +6122,6 @@ dependencies = [
  "frost-blueprint",
  "serde_json",
  "tokio",
- "tower",
  "tracing",
  "tracing-subscriber 0.3.19",
 ]
@@ -6405,7 +6400,7 @@ dependencies = [
 [[package]]
 name = "gadget-blueprint-serde"
 version = "0.3.1"
-source = "git+https://github.com/tangle-network/blueprint?branch=serial%2Fper-node-context#865ad517b2d38035a6e449dffe71913b2b41c049"
+source = "git+https://github.com/tangle-network/blueprint#5e1c7d85b548d04e7133e87c87337dc554fa779e"
 dependencies = [
  "paste",
  "serde",
@@ -6416,7 +6411,7 @@ dependencies = [
 [[package]]
 name = "gadget-client-core"
 version = "0.1.0"
-source = "git+https://github.com/tangle-network/blueprint?branch=serial%2Fper-node-context#865ad517b2d38035a6e449dffe71913b2b41c049"
+source = "git+https://github.com/tangle-network/blueprint#5e1c7d85b548d04e7133e87c87337dc554fa779e"
 dependencies = [
  "auto_impl",
  "gadget-std",
@@ -6426,7 +6421,7 @@ dependencies = [
 [[package]]
 name = "gadget-client-eigenlayer"
 version = "0.1.0"
-source = "git+https://github.com/tangle-network/blueprint?branch=serial%2Fper-node-context#865ad517b2d38035a6e449dffe71913b2b41c049"
+source = "git+https://github.com/tangle-network/blueprint#5e1c7d85b548d04e7133e87c87337dc554fa779e"
 dependencies = [
  "alloy-contract",
  "alloy-network",
@@ -6449,7 +6444,7 @@ dependencies = [
 [[package]]
 name = "gadget-client-evm"
 version = "0.1.0"
-source = "git+https://github.com/tangle-network/blueprint?branch=serial%2Fper-node-context#865ad517b2d38035a6e449dffe71913b2b41c049"
+source = "git+https://github.com/tangle-network/blueprint#5e1c7d85b548d04e7133e87c87337dc554fa779e"
 dependencies = [
  "alloy-consensus",
  "alloy-json-rpc",
@@ -6478,7 +6473,7 @@ dependencies = [
 [[package]]
 name = "gadget-client-tangle"
 version = "0.1.0"
-source = "git+https://github.com/tangle-network/blueprint?branch=serial%2Fper-node-context#865ad517b2d38035a6e449dffe71913b2b41c049"
+source = "git+https://github.com/tangle-network/blueprint#5e1c7d85b548d04e7133e87c87337dc554fa779e"
 dependencies = [
  "auto_impl",
  "blueprint-core",
@@ -6498,7 +6493,7 @@ dependencies = [
 [[package]]
 name = "gadget-clients"
 version = "0.1.0"
-source = "git+https://github.com/tangle-network/blueprint?branch=serial%2Fper-node-context#865ad517b2d38035a6e449dffe71913b2b41c049"
+source = "git+https://github.com/tangle-network/blueprint#5e1c7d85b548d04e7133e87c87337dc554fa779e"
 dependencies = [
  "gadget-client-core",
  "gadget-client-eigenlayer",
@@ -6511,7 +6506,7 @@ dependencies = [
 [[package]]
 name = "gadget-context-derive"
 version = "0.3.1"
-source = "git+https://github.com/tangle-network/blueprint?branch=serial%2Fper-node-context#865ad517b2d38035a6e449dffe71913b2b41c049"
+source = "git+https://github.com/tangle-network/blueprint#5e1c7d85b548d04e7133e87c87337dc554fa779e"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -6521,7 +6516,7 @@ dependencies = [
 [[package]]
 name = "gadget-contexts"
 version = "0.1.0"
-source = "git+https://github.com/tangle-network/blueprint?branch=serial%2Fper-node-context#865ad517b2d38035a6e449dffe71913b2b41c049"
+source = "git+https://github.com/tangle-network/blueprint#5e1c7d85b548d04e7133e87c87337dc554fa779e"
 dependencies = [
  "blueprint-runner",
  "gadget-clients",
@@ -6535,7 +6530,7 @@ dependencies = [
 [[package]]
 name = "gadget-core-testing-utils"
 version = "0.1.0"
-source = "git+https://github.com/tangle-network/blueprint?branch=serial%2Fper-node-context#865ad517b2d38035a6e449dffe71913b2b41c049"
+source = "git+https://github.com/tangle-network/blueprint#5e1c7d85b548d04e7133e87c87337dc554fa779e"
 dependencies = [
  "blueprint-core",
  "blueprint-router",
@@ -6556,7 +6551,7 @@ dependencies = [
 [[package]]
 name = "gadget-crypto"
 version = "0.1.0"
-source = "git+https://github.com/tangle-network/blueprint?branch=serial%2Fper-node-context#865ad517b2d38035a6e449dffe71913b2b41c049"
+source = "git+https://github.com/tangle-network/blueprint#5e1c7d85b548d04e7133e87c87337dc554fa779e"
 dependencies = [
  "gadget-crypto-bls",
  "gadget-crypto-bn254",
@@ -6573,7 +6568,7 @@ dependencies = [
 [[package]]
 name = "gadget-crypto-bls"
 version = "0.1.0"
-source = "git+https://github.com/tangle-network/blueprint?branch=serial%2Fper-node-context#865ad517b2d38035a6e449dffe71913b2b41c049"
+source = "git+https://github.com/tangle-network/blueprint#5e1c7d85b548d04e7133e87c87337dc554fa779e"
 dependencies = [
  "ark-serialize 0.5.0",
  "gadget-crypto-core",
@@ -6589,7 +6584,7 @@ dependencies = [
 [[package]]
 name = "gadget-crypto-bn254"
 version = "0.1.0"
-source = "git+https://github.com/tangle-network/blueprint?branch=serial%2Fper-node-context#865ad517b2d38035a6e449dffe71913b2b41c049"
+source = "git+https://github.com/tangle-network/blueprint#5e1c7d85b548d04e7133e87c87337dc554fa779e"
 dependencies = [
  "ark-bn254",
  "ark-ec 0.5.0",
@@ -6609,7 +6604,7 @@ dependencies = [
 [[package]]
 name = "gadget-crypto-core"
 version = "0.1.0"
-source = "git+https://github.com/tangle-network/blueprint?branch=serial%2Fper-node-context#865ad517b2d38035a6e449dffe71913b2b41c049"
+source = "git+https://github.com/tangle-network/blueprint#5e1c7d85b548d04e7133e87c87337dc554fa779e"
 dependencies = [
  "clap",
  "gadget-std",
@@ -6620,7 +6615,7 @@ dependencies = [
 [[package]]
 name = "gadget-crypto-ed25519"
 version = "0.1.0"
-source = "git+https://github.com/tangle-network/blueprint?branch=serial%2Fper-node-context#865ad517b2d38035a6e449dffe71913b2b41c049"
+source = "git+https://github.com/tangle-network/blueprint#5e1c7d85b548d04e7133e87c87337dc554fa779e"
 dependencies = [
  "ed25519-zebra",
  "gadget-crypto-core",
@@ -6634,7 +6629,7 @@ dependencies = [
 [[package]]
 name = "gadget-crypto-hashing"
 version = "0.1.0"
-source = "git+https://github.com/tangle-network/blueprint?branch=serial%2Fper-node-context#865ad517b2d38035a6e449dffe71913b2b41c049"
+source = "git+https://github.com/tangle-network/blueprint#5e1c7d85b548d04e7133e87c87337dc554fa779e"
 dependencies = [
  "blake3",
  "gadget-std",
@@ -6645,7 +6640,7 @@ dependencies = [
 [[package]]
 name = "gadget-crypto-k256"
 version = "0.1.0"
-source = "git+https://github.com/tangle-network/blueprint?branch=serial%2Fper-node-context#865ad517b2d38035a6e449dffe71913b2b41c049"
+source = "git+https://github.com/tangle-network/blueprint#5e1c7d85b548d04e7133e87c87337dc554fa779e"
 dependencies = [
  "alloy-primitives 0.8.22",
  "alloy-signer-local",
@@ -6661,7 +6656,7 @@ dependencies = [
 [[package]]
 name = "gadget-crypto-sp-core"
 version = "0.1.0"
-source = "git+https://github.com/tangle-network/blueprint?branch=serial%2Fper-node-context#865ad517b2d38035a6e449dffe71913b2b41c049"
+source = "git+https://github.com/tangle-network/blueprint#5e1c7d85b548d04e7133e87c87337dc554fa779e"
 dependencies = [
  "gadget-crypto-core",
  "gadget-std",
@@ -6676,7 +6671,7 @@ dependencies = [
 [[package]]
 name = "gadget-crypto-sr25519"
 version = "0.1.0"
-source = "git+https://github.com/tangle-network/blueprint?branch=serial%2Fper-node-context#865ad517b2d38035a6e449dffe71913b2b41c049"
+source = "git+https://github.com/tangle-network/blueprint#5e1c7d85b548d04e7133e87c87337dc554fa779e"
 dependencies = [
  "gadget-crypto-core",
  "gadget-std",
@@ -6690,7 +6685,7 @@ dependencies = [
 [[package]]
 name = "gadget-crypto-tangle-pair-signer"
 version = "0.1.0"
-source = "git+https://github.com/tangle-network/blueprint?branch=serial%2Fper-node-context#865ad517b2d38035a6e449dffe71913b2b41c049"
+source = "git+https://github.com/tangle-network/blueprint#5e1c7d85b548d04e7133e87c87337dc554fa779e"
 dependencies = [
  "alloy-primitives 0.8.22",
  "alloy-signer-local",
@@ -6708,7 +6703,7 @@ dependencies = [
 [[package]]
 name = "gadget-keystore"
 version = "0.1.0"
-source = "git+https://github.com/tangle-network/blueprint?branch=serial%2Fper-node-context#865ad517b2d38035a6e449dffe71913b2b41c049"
+source = "git+https://github.com/tangle-network/blueprint#5e1c7d85b548d04e7133e87c87337dc554fa779e"
 dependencies = [
  "alloy-network",
  "alloy-primitives 0.8.22",
@@ -6745,7 +6740,7 @@ dependencies = [
 [[package]]
 name = "gadget-networking"
 version = "0.1.0"
-source = "git+https://github.com/tangle-network/blueprint?branch=serial%2Fper-node-context#865ad517b2d38035a6e449dffe71913b2b41c049"
+source = "git+https://github.com/tangle-network/blueprint#5e1c7d85b548d04e7133e87c87337dc554fa779e"
 dependencies = [
  "alloy-primitives 0.8.22",
  "anyhow",
@@ -6776,7 +6771,7 @@ dependencies = [
 [[package]]
 name = "gadget-networking-round-based-extension"
 version = "0.1.0"
-source = "git+https://github.com/tangle-network/blueprint?branch=serial%2Fper-node-context#865ad517b2d38035a6e449dffe71913b2b41c049"
+source = "git+https://github.com/tangle-network/blueprint#5e1c7d85b548d04e7133e87c87337dc554fa779e"
 dependencies = [
  "crossbeam",
  "crossbeam-channel",
@@ -6795,7 +6790,7 @@ dependencies = [
 [[package]]
 name = "gadget-rpc-calls"
 version = "0.1.0"
-source = "git+https://github.com/tangle-network/blueprint?branch=serial%2Fper-node-context#865ad517b2d38035a6e449dffe71913b2b41c049"
+source = "git+https://github.com/tangle-network/blueprint#5e1c7d85b548d04e7133e87c87337dc554fa779e"
 dependencies = [
  "metrics",
 ]
@@ -6803,7 +6798,7 @@ dependencies = [
 [[package]]
 name = "gadget-std"
 version = "0.1.0"
-source = "git+https://github.com/tangle-network/blueprint?branch=serial%2Fper-node-context#865ad517b2d38035a6e449dffe71913b2b41c049"
+source = "git+https://github.com/tangle-network/blueprint#5e1c7d85b548d04e7133e87c87337dc554fa779e"
 dependencies = [
  "colored",
  "num-traits",
@@ -6814,7 +6809,7 @@ dependencies = [
 [[package]]
 name = "gadget-store-local-database"
 version = "0.1.0"
-source = "git+https://github.com/tangle-network/blueprint?branch=serial%2Fper-node-context#865ad517b2d38035a6e449dffe71913b2b41c049"
+source = "git+https://github.com/tangle-network/blueprint#5e1c7d85b548d04e7133e87c87337dc554fa779e"
 dependencies = [
  "gadget-std",
  "serde",
@@ -6825,7 +6820,7 @@ dependencies = [
 [[package]]
 name = "gadget-stores"
 version = "0.1.0"
-source = "git+https://github.com/tangle-network/blueprint?branch=serial%2Fper-node-context#865ad517b2d38035a6e449dffe71913b2b41c049"
+source = "git+https://github.com/tangle-network/blueprint#5e1c7d85b548d04e7133e87c87337dc554fa779e"
 dependencies = [
  "gadget-store-local-database",
 ]
@@ -6833,7 +6828,7 @@ dependencies = [
 [[package]]
 name = "gadget-tangle-testing-utils"
 version = "0.1.0"
-source = "git+https://github.com/tangle-network/blueprint?branch=serial%2Fper-node-context#865ad517b2d38035a6e449dffe71913b2b41c049"
+source = "git+https://github.com/tangle-network/blueprint#5e1c7d85b548d04e7133e87c87337dc554fa779e"
 dependencies = [
  "alloy-json-rpc",
  "alloy-primitives 0.8.22",
@@ -6871,7 +6866,7 @@ dependencies = [
 [[package]]
 name = "gadget-testing-utils"
 version = "0.1.0"
-source = "git+https://github.com/tangle-network/blueprint?branch=serial%2Fper-node-context#865ad517b2d38035a6e449dffe71913b2b41c049"
+source = "git+https://github.com/tangle-network/blueprint#5e1c7d85b548d04e7133e87c87337dc554fa779e"
 dependencies = [
  "gadget-core-testing-utils",
  "gadget-tangle-testing-utils",
@@ -9068,12 +9063,12 @@ dependencies = [
 
 [[package]]
 name = "libsecp256k1"
-version = "0.7.1"
+version = "0.7.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "95b09eff1b35ed3b33b877ced3a691fc7a481919c7e29c53c906226fcf55e2a1"
+checksum = "e79019718125edc905a079a70cfa5f3820bc76139fc91d6f9abc27ea2a887139"
 dependencies = [
  "arrayref",
- "base64 0.13.1",
+ "base64 0.22.1",
  "digest 0.9.0",
  "hmac-drbg",
  "libsecp256k1-core",
@@ -17434,9 +17429,9 @@ dependencies = [
 
 [[package]]
 name = "tokio"
-version = "1.44.0"
+version = "1.44.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9975ea0f48b5aa3972bf2d888c238182458437cc2a19374b81b25cdf1023fb3a"
+checksum = "f382da615b842244d4b8738c82ed1275e6c5dd90c459a30941cd07080b06c91a"
 dependencies = [
  "backtrace",
  "bytes",
@@ -17551,9 +17546,9 @@ dependencies = [
 
 [[package]]
 name = "tokio-util"
-version = "0.7.13"
+version = "0.7.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d7fcaa8d55a2bdd6b83ace262b016eca0d79ee02818c5c1bcdf0305114081078"
+checksum = "6b9590b93e6fcc1739458317cccd391ad3955e2bde8913edf6f95f9e65a8f034"
 dependencies = [
  "bytes",
  "futures-core",

@@ -16,14 +16,10 @@ rand.workspace = true
 tracing.workspace = true
 thiserror.workspace = true
 displaydoc.workspace = true
-async-trait.workspace = true
 futures.workspace = true
 color-eyre.workspace = true
 hex.workspace = true
-k256.workspace = true
 tokio = { workspace = true, default-features = false, features = ["full", "rt-multi-thread"] }
-tokio-stream = { workspace = true, default-features = false }
-tracing-subscriber = { workspace = true, features = ["parking_lot", "env-filter"] }
 serde = { workspace = true, default-features = false, features = ["alloc"] }
 serde_json = { workspace = true, default-features = false, features = ["alloc"] }
 rand_chacha = { workspace = true, default-features = false }
@@ -108,7 +104,7 @@ futures = "0.3"
 color-eyre = { version = "0.6", features = ["tracing-error", "color-spantrace"] }
 hex = "0.4"
 k256 = { version = "0.13.4" }
-tokio = { version = "^1", default-features = false, features = ["full", "rt-multi-thread"] }
+tokio = { version = "1.44.1", default-features = false, features = ["full", "rt-multi-thread"] }
 tokio-stream = { version = "0.1", default-features = false }
 tracing-subscriber = { version = "0.3", features = ["parking_lot", "env-filter"] }
 serde = { version = "^1", default-features = false, features = ["alloc"] }
@@ -125,7 +121,7 @@ sled = { version = "0.34", default-features = false }
 round-based = { version = "0.4.1", default-features = false, features = ["derive"] }
 crossbeam-channel = { version = "0.5", default-features = false }
 
-blueprint-sdk = { git = "https://github.com/tangle-network/blueprint", default-features = false, branch = "serial/per-node-context" }
+blueprint-sdk = { git = "https://github.com/tangle-network/blueprint", default-features = false }
 tower = { version = "0.5.2", default-features = false }
 
 # The profile that 'dist' will build with

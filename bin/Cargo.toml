@@ -20,7 +20,6 @@ tracing-subscriber = { workspace = true, features = ["parking_lot", "env-filter"
 
 frost-blueprint.workspace = true
 blueprint-sdk = { workspace = true, features = ["tangle"] }
-tower.workspace = true
 
 [build-dependencies]
 blueprint-sdk = { workspace = true, features = ["macros", "build"] }

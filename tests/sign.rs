@@ -1,4 +1,4 @@
-//#![cfg(all(test, feature = "e2e"))]
+#![cfg(all(test, feature = "e2e"))]
 use blueprint_sdk as sdk;
 use frost_blueprint as blueprint;
 
