@@ -15,3 +15,4 @@ remappings_version = false
 
 [dependencies]
 tnt-core = "0.3.0"
+forge-std = "1.9.6"
