@@ -18,7 +18,7 @@ use std::convert::Infallible;
 
 use frost_core::{Ciphersuite, Identifier};
 use round_based::rounds_router::simple_store;
-use round_based::rounds_router::{errors as router_error, CompleteRoundError};
+use round_based::rounds_router::{CompleteRoundError, errors as router_error};
 pub use std_error::StdError;
 pub type BoxedError = Box<dyn StdError + Send + Sync>;
 

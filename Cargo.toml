@@ -1,87 +1,62 @@
 [package]
 name = "frost-blueprint"
-version = "0.2.0"
-edition = "2021"
-description = "FROST Blueprint built using Tangle Gadget SDK"
-authors = ["Webb Technologies Inc."]
-license = "Unlicense"
-homepage = "https://github.com/tangle-network/frost-blueprint"
-repository = "https://github.com/tangle-network/frost-blueprint"
-readme = "README.md"
-categories = ["cryptography", "cryptography::cryptocurrencies"]
-keywords = ["tangle", "blueprint", "avs"]
-rust-version = "1.81"
-
-[lib]
-path = "src/lib.rs"
-
-[[bin]]
-name = "frost-blueprint"
-path = "src/main.rs"
-
-[package.metadata.blueprint]
-manager = { Evm = "FrostBlueprint" }
-
-# [[package.metadata.gadget.Native.sources]]
-# owner = "tangle-network"
-# repo = "frost-blueprint"
-# tag = "0.1.0"
-# binaries = [
-#     { arch = "Arm64", os = "Macos", name = "frost-blueprint-aarch64-apple-darwin.tar.xz" },
-#     { arch = "Amd64", os = "Macos", name = "frost-blueprint-x86_64-apple-darwin.tar.xz" },
-#     { arch = "Amd64", os = "Macos", name = "frost-blueprint-x86_64-unknown-linux-gnu.tar.xz" },
-# ]
+description = "FROST Blueprint built using Tangle Blueprint SDK"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+homepage.workspace = true
+repository.workspace = true
+readme.workspace = true
+categories.workspace = true
+keywords.workspace = true
 
 [dependencies]
-tracing = "0.1"
-thiserror = "2.0"
-displaydoc = "0.2.5"
-async-trait = "0.1"
-futures = "0.3"
-color-eyre = { version = "0.6", features = ["tracing-error", "color-spantrace"] }
-hex = "0.4"
-k256 = { version = "0.13.4" }
-tokio = { version = "^1", default-features = false, features = ["full", "rt-multi-thread"] }
-tokio-stream = { version = "0.1", default-features = false }
-tracing-subscriber = { version = "0.3", features = ["parking_lot", "env-filter"] }
-serde = { version = "^1", default-features = false, features = ["alloc"] }
-serde_json = { version = "1.0", default-features = false, features = ["alloc"] }
-rand = "0.8"
-rand_chacha = { version = "0.3", default-features = false }
+rand.workspace = true
+tracing.workspace = true
+thiserror.workspace = true
+displaydoc.workspace = true
+futures.workspace = true
+color-eyre.workspace = true
+hex.workspace = true
+tokio = { workspace = true, default-features = false, features = ["full", "rt-multi-thread"] }
+serde = { workspace = true, default-features = false, features = ["alloc"] }
+serde_json = { workspace = true, default-features = false, features = ["alloc"] }
+rand_chacha = { workspace = true, default-features = false }
 
 # FROST
-frost-core = { version = "2.1", default-features = false, features = ["serialization", "cheater-detection"] }
-frost-ed25519 = { version = "2.1", default-features = false, features = ["serialization", "cheater-detection"] }
-frost-secp256k1 = { version = "2.1", default-features = false, features = ["serialization", "cheater-detection"] }
-
-sled = { version = "0.34", default-features = false, optional = true }
-round-based = { version = "0.4.1", default-features = false, features = ["derive"] }
-
-blueprint-sdk = { git = "https://github.com/tangle-network/gadget", features = [
-    "macros",
+frost-core = { workspace = true, default-features = false, features = ["serialization", "cheater-detection"] }
+frost-ed25519 = { workspace = true, default-features = false, features = ["serialization", "cheater-detection"] }
+frost-secp256k1 = { workspace = true, default-features = false, features = ["serialization", "cheater-detection"] }
+blueprint-sdk = { workspace = true, features = [
+    "tracing",
     "tangle",
     "networking",
     "local-store",
-    "networking-sp-core-ecdsa",
+    "macros",
     "round-based-compat",
 ] }
 
+# Other
+sled = { workspace = true, default-features = false, optional = true }
+round-based = { workspace = true, default-features = false, features = ["derive"] }
+crossbeam-channel = { workspace = true, default-features = false }
 
 [dev-dependencies]
-tokio = { version = "^1", default-features = false, features = ["full", "rt-multi-thread"] }
-frost-core = { version = "2.0", default-features = false, features = [
+tokio = { workspace = true, default-features = false, features = ["full", "rt-multi-thread"] }
+frost-core = { workspace = true, default-features = false, features = [
     "serialization",
     "cheater-detection",
     "internals",
 ] }
-round-based = { version = "0.4.1", default-features = false, features = ["derive", "sim", "sim-async"] }
+round-based = { workspace = true, default-features = false, features = ["derive", "sim", "sim-async"] }
 proptest = { version = "1.5.0", default-features = false, features = ["std", "bit-set", "fork", "timeout"] }
 test-strategy = { version = "0.4.0", default-features = false }
 
-blueprint-sdk = { git = "https://github.com/tangle-network/gadget", features = ["std", "tangle", "testing", "round-based-compat"] }
+blueprint-sdk = { workspace = true, features = ["std", "tangle", "testing", "round-based-compat"] }
 
 [build-dependencies]
-blueprint-sdk = { git = "https://github.com/tangle-network/gadget", features = ["build"] }
+blueprint-sdk = { workspace = true, features = ["build"] }
 
 [features]
 default = ["std", "kv-sled"]
@@ -99,6 +74,55 @@ kv-mem = []
 
 # Internal features for end-to-end tests
 e2e = []
+
+
+[workspace]
+members = ["bin", "."]
+
+[workspace.package]
+version = "0.3.0"
+edition = "2024"
+description = "FROST Blueprint built using Tangle Gadget SDK"
+authors = ["Webb Technologies Inc."]
+license = "Unlicense"
+homepage = "https://github.com/tangle-network/frost-blueprint"
+repository = "https://github.com/tangle-network/frost-blueprint"
+readme = "README.md"
+categories = ["cryptography", "cryptography::cryptocurrencies"]
+keywords = ["tangle", "blueprint", "avs"]
+rust-version = "1.81"
+
+[workspace.dependencies]
+# Our blueprint
+frost-blueprint = { path = "./" }
+
+tracing = "0.1"
+thiserror = "2.0"
+displaydoc = "0.2.5"
+async-trait = "0.1"
+futures = "0.3"
+color-eyre = { version = "0.6", features = ["tracing-error", "color-spantrace"] }
+hex = "0.4"
+k256 = { version = "0.13.4" }
+tokio = { version = "1.44.1", default-features = false, features = ["full", "rt-multi-thread"] }
+tokio-stream = { version = "0.1", default-features = false }
+tracing-subscriber = { version = "0.3", features = ["parking_lot", "env-filter"] }
+serde = { version = "^1", default-features = false, features = ["alloc"] }
+serde_json = { version = "1.0", default-features = false, features = ["alloc"] }
+rand = "0.8"
+rand_chacha = { version = "0.3", default-features = false }
+
+# FROST
+frost-core = { version = "2.1", default-features = false, features = ["serialization", "cheater-detection"] }
+frost-ed25519 = { version = "2.1", default-features = false, features = ["serialization", "cheater-detection"] }
+frost-secp256k1 = { version = "2.1", default-features = false, features = ["serialization", "cheater-detection"] }
+
+sled = { version = "0.34", default-features = false }
+round-based = { version = "0.4.1", default-features = false, features = ["derive"] }
+crossbeam-channel = { version = "0.5", default-features = false }
+
+blueprint-sdk = { git = "https://github.com/tangle-network/blueprint", default-features = false }
+tower = { version = "0.5.2", default-features = false }
 
 # The profile that 'dist' will build with
 [profile.dist]

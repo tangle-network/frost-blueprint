@@ -15,7 +15,7 @@ env:
   RUST_BACKTRACE: full
   RUST_LOG: "gadget=debug"
   CARGO_TERM_COLOR: always
-  TANGLE_RELEASE: "v1.2.8"
+  TANGLE_RELEASE: "6174770"
   SIGNER: "//Alice"
   EVM_SIGNER: "0xcb6df9de1efca7a3998a8ead4e02159d5fa99c3e0d4fd6432667390bb4726854"
 

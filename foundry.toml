@@ -14,6 +14,5 @@ remappings_location = "txt"
 remappings_version = false
 
 [dependencies]
-forge-std = "1.9.4"
-"@openzeppelin-contracts" = "5.1.0"
 tnt-core = "0.3.0"
+forge-std = "1.9.6"
