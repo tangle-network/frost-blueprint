@@ -110,7 +110,7 @@ tracing-subscriber = { version = "0.3", features = ["parking_lot", "env-filter"]
 serde = { version = "^1", default-features = false, features = ["alloc"] }
 serde_json = { version = "1.0", default-features = false, features = ["alloc"] }
 rand = "0.8"
-rand_chacha = { version = "0.3", default-features = false }
+rand_chacha = { version = "0.9", default-features = false }
 
 # FROST
 frost-core = { version = "2.1", default-features = false, features = ["serialization", "cheater-detection"] }
