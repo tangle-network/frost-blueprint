@@ -109,7 +109,7 @@ tokio-stream = { version = "0.1", default-features = false }
 tracing-subscriber = { version = "0.3", features = ["parking_lot", "env-filter"] }
 serde = { version = "^1", default-features = false, features = ["alloc"] }
 serde_json = { version = "1.0", default-features = false, features = ["alloc"] }
-rand = "0.8"
+rand = "0.9"
 rand_chacha = { version = "0.3", default-features = false }
 
 # FROST
