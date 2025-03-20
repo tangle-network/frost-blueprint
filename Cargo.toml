@@ -51,7 +51,7 @@ frost-core = { workspace = true, default-features = false, features = [
 ] }
 round-based = { workspace = true, default-features = false, features = ["derive", "sim", "sim-async"] }
 proptest = { version = "1.5.0", default-features = false, features = ["std", "bit-set", "fork", "timeout"] }
-test-strategy = { version = "0.4.0", default-features = false }
+test-strategy = { version = "0.4.1", default-features = false }
 
 blueprint-sdk = { workspace = true, features = ["std", "tangle", "testing", "round-based-compat"] }
 
