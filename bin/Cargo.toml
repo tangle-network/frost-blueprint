@@ -31,11 +31,11 @@ std = ["blueprint-sdk/std", "frost-blueprint/std"]
 kv-sled = ["frost-blueprint/kv-sled"]
 kv-mem = ["frost-blueprint/kv-mem"]
 
-[[package.metadata.gadget.Native.sources]]
-owner = "tangle-network"
-repo = "frost-blueprint"
-tag = "0.3.0"
-binaries = [
-  { arch = "Amd64", os = "Linux", name = "amd64-linux-frost-blueprint-cli" },
-  { arch = "Arm64", os = "Linux", name = "arm64-linux-frost-blueprint-cli" },
-]
+# [[package.metadata.gadget.Native.sources]]
+# owner = "tangle-network"
+# repo = "frost-blueprint"
+# tag = "0.3.0"
+# binaries = [
+#   { arch = "Amd64", os = "Linux", name = "amd64-linux-frost-blueprint-cli" },
+#   { arch = "Arm64", os = "Linux", name = "arm64-linux-frost-blueprint-cli" },
+# ]
