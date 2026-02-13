@@ -101,8 +101,7 @@ pub async fn sign(
     let res = match ciphersuite {
         frost_ed25519::Ed25519Sha512::ID => {
             let entry: crate::keygen::KeygenEntry<frost_ed25519::Ed25519Sha512> =
-                serde_json::from_value(raw_info["entry"].clone())
-                    .map_err(|e| e.to_string())?;
+                serde_json::from_value(raw_info["entry"].clone()).map_err(|e| e.to_string())?;
             signing_internal(
                 rng,
                 my_index,
@@ -117,8 +116,7 @@ pub async fn sign(
         }
         frost_secp256k1::Secp256K1Sha256::ID => {
             let entry: crate::keygen::KeygenEntry<frost_secp256k1::Secp256K1Sha256> =
-                serde_json::from_value(raw_info["entry"].clone())
-                    .map_err(|e| e.to_string())?;
+                serde_json::from_value(raw_info["entry"].clone()).map_err(|e| e.to_string())?;
             signing_internal(
                 rng,
                 my_index,
@@ -138,9 +136,7 @@ pub async fn sign(
         Ok(signature) => Ok(TangleResult(SignResult {
             signature: signature.into(),
         })),
-        Err(Error::SelfNotInSigners) => {
-            Err("Self not in signers list".to_string())
-        }
+        Err(Error::SelfNotInSigners) => Err("Self not in signers list".to_string()),
         Err(e) => Err(e.to_string()),
     }
 }
@@ -181,8 +177,7 @@ where
         .map(|(&idx, &peer)| (idx, peer))
         .choose_multiple(&mut signers_rng, usize::from(t));
 
-    let selected_parties: HashMap<PartyIndex, libp2p::PeerId> =
-        signers.iter().cloned().collect();
+    let selected_parties: HashMap<PartyIndex, libp2p::PeerId> = signers.iter().cloned().collect();
     let signer_set: Vec<u16> = signers.iter().map(|(idx, _)| *idx).collect();
 
     // Find my position in the signer set

@@ -1,13 +1,14 @@
 use blueprint_sdk::contexts::tangle::TangleClientContext;
-use blueprint_sdk::runner::BlueprintRunner;
+use blueprint_sdk::info;
 use blueprint_sdk::runner::config::BlueprintEnvironment;
 use blueprint_sdk::runner::tangle::config::TangleConfig;
+use blueprint_sdk::runner::BlueprintRunner;
 use blueprint_sdk::tangle::{TangleConsumer, TangleProducer};
-use blueprint_sdk::info;
-use frost_blueprint::FrostContext;
 use frost_blueprint::router;
+use frost_blueprint::FrostContext;
 
 #[tokio::main]
+#[allow(clippy::result_large_err)]
 async fn main() -> Result<(), blueprint_sdk::Error> {
     setup_log();
 
@@ -15,7 +16,7 @@ async fn main() -> Result<(), blueprint_sdk::Error> {
 
     FrostContext::init(&env)
         .await
-        .map_err(|e| blueprint_sdk::Error::Other(e))?;
+        .map_err(blueprint_sdk::Error::Other)?;
 
     let tangle_client = env
         .tangle_client()
@@ -50,7 +51,7 @@ async fn main() -> Result<(), blueprint_sdk::Error> {
 
 fn setup_log() {
     use tracing_subscriber::prelude::*;
-    use tracing_subscriber::{EnvFilter, fmt};
+    use tracing_subscriber::{fmt, EnvFilter};
     let _ = tracing_subscriber::registry()
         .with(fmt::layer())
         .with(EnvFilter::from_default_env())

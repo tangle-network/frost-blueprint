@@ -1,8 +1,8 @@
 use std::collections::BTreeMap;
 
 use frost_core::keys::dkg::round2::Package as Round2Package;
-use frost_core::keys::{KeyPackage, dkg::round1::Package as Round1Package};
-use frost_core::keys::{PublicKeyPackage, dkg};
+use frost_core::keys::{dkg, PublicKeyPackage};
+use frost_core::keys::{dkg::round1::Package as Round1Package, KeyPackage};
 use frost_core::{Ciphersuite, Group, Identifier};
 use round_based::rounds_router::simple_store::RoundInput;
 use round_based::rounds_router::RoundsRouter;
@@ -112,9 +112,12 @@ where
     tracer.stage("Broadcast shares");
     tracing::debug!("Broadcasting round 1 package");
     tracer.send_msg();
-    futures::SinkExt::send(&mut outgoings, Outgoing::broadcast(Msg::Round1(round1_package)))
-        .await
-        .map_err(IoError::send_message)?;
+    futures::SinkExt::send(
+        &mut outgoings,
+        Outgoing::broadcast(Msg::Round1(round1_package)),
+    )
+    .await
+    .map_err(IoError::send_message)?;
     tracer.msg_sent();
     tracing::debug!("Waiting for round 1 packages");
     tracer.receive_msgs();
@@ -145,9 +148,12 @@ where
         tracer.send_msg();
         let to = IdentifierWrapper(to).as_u16();
         tracing::debug!(%to, "Sending to party");
-        futures::SinkExt::send(&mut outgoings, Outgoing::p2p(to, Msg::Round2(round2_package)))
-            .await
-            .map_err(IoError::send_message)?;
+        futures::SinkExt::send(
+            &mut outgoings,
+            Outgoing::p2p(to, Msg::Round2(round2_package)),
+        )
+        .await
+        .map_err(IoError::send_message)?;
         tracer.msg_sent();
     }
     drop(span);

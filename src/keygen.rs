@@ -89,22 +89,18 @@ pub async fn keygen(
 
     let key = match ciphersuite.as_str() {
         frost_ed25519::Ed25519Sha512::ID => {
-            keygen_internal::<frost_ed25519::Ed25519Sha512, _>(
-                rng, i, n, threshold, &parties,
-            )
-            .await
-            .map_err(|e| e.to_string())?
-            .serialize()
-            .map_err(|e| e.to_string())?
+            keygen_internal::<frost_ed25519::Ed25519Sha512, _>(rng, i, n, threshold, &parties)
+                .await
+                .map_err(|e| e.to_string())?
+                .serialize()
+                .map_err(|e| e.to_string())?
         }
         frost_secp256k1::Secp256K1Sha256::ID => {
-            keygen_internal::<frost_secp256k1::Secp256K1Sha256, _>(
-                rng, i, n, threshold, &parties,
-            )
-            .await
-            .map_err(|e| e.to_string())?
-            .serialize()
-            .map_err(|e| e.to_string())?
+            keygen_internal::<frost_secp256k1::Secp256K1Sha256, _>(rng, i, n, threshold, &parties)
+                .await
+                .map_err(|e| e.to_string())?
+                .serialize()
+                .map_err(|e| e.to_string())?
         }
         _ => return Err(format!("Unknown ciphersuite: {ciphersuite}")),
     };
@@ -131,7 +127,10 @@ where
 {
     let ctx = frost_ctx();
 
-    info!("Starting FROST Keygen for party {i}, n={n}, t={t}, ciphersuite={}", C::ID);
+    info!(
+        "Starting FROST Keygen for party {i}, n={n}, t={t}, ciphersuite={}",
+        C::ID
+    );
 
     let network = RoundBasedNetworkAdapter::<keygen_protocol::Msg<C>, K256Ecdsa>::new(
         ctx.network_backend.clone(),
