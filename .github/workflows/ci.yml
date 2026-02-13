@@ -37,6 +37,9 @@ jobs:
       - name: checkout code
         uses: actions/checkout@v4
 
+      - name: Install protoc
+        run: sudo apt-get install -y protobuf-compiler
+
       - name: Install Foundry
         uses: foundry-rs/foundry-toolchain@v1
         with:
@@ -71,6 +74,9 @@ jobs:
     steps:
       - name: checkout code
         uses: actions/checkout@v4
+
+      - name: Install protoc
+        run: sudo apt-get install -y protobuf-compiler
 
       - name: Install Foundry
         uses: foundry-rs/foundry-toolchain@v1
