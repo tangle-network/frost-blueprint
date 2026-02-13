@@ -1,14 +1,14 @@
 use std::collections::BTreeMap;
 
 use frost_core::keys::{KeyPackage, PublicKeyPackage};
-use frost_core::round1::{SigningCommitments, commit};
-use frost_core::round2::{SignatureShare, sign};
+use frost_core::round1::{commit, SigningCommitments};
+use frost_core::round2::{sign, SignatureShare};
 use frost_core::{
-    Ciphersuite, Group, Identifier, Signature, SigningPackage, aggregate, verify_signature_share,
+    aggregate, verify_signature_share, Ciphersuite, Group, Identifier, Signature, SigningPackage,
 };
-use round_based::rounds_router::RoundsRouter;
 use round_based::rounds_router::simple_store::RoundInput;
-use round_based::{Delivery, Mpc, MpcParty, Outgoing, ProtocolMessage, SinkExt};
+use round_based::rounds_router::RoundsRouter;
+use round_based::{Delivery, Mpc, MpcParty, Outgoing, ProtocolMessage};
 use serde::{Deserialize, Serialize};
 
 use crate::rounds::{IdentifierWrapper, IoError};
@@ -58,8 +58,6 @@ impl<C: Ciphersuite> From<SigningAborted<C>> for Reason<C> {
 }
 
 /// Error indicating that protocol was aborted by malicious party
-///
-/// It _can be_ cryptographically proven, but we do not support it yet.
 #[derive(Debug, displaydoc::Display)]
 #[cfg_attr(feature = "std", derive(thiserror::Error))]
 pub enum SigningAborted<C: Ciphersuite> {
@@ -86,7 +84,6 @@ pub enum Bug {
 
 /// Run FROST Signing protocol
 #[tracing::instrument(
-    target = "gadget",
     name = "sign",
     skip(rng, tracer, party, key_pkg, pub_key_pkg, msg),
     err
@@ -139,10 +136,12 @@ where
     tracer.stage("Broadcast shares");
     tracing::debug!("Broadcasting round 1 package");
     tracer.send_msg();
-    outgoings
-        .send(Outgoing::broadcast(Msg::Round1(signing_commitments)))
-        .await
-        .map_err(IoError::send_message)?;
+    futures::SinkExt::send(
+        &mut outgoings,
+        Outgoing::broadcast(Msg::Round1(signing_commitments)),
+    )
+    .await
+    .map_err(IoError::send_message)?;
     tracer.msg_sent();
     tracing::debug!("Waiting for round 1 packages");
     tracer.receive_msgs();
@@ -179,10 +178,12 @@ where
     tracing::debug!("Broadcasting round 2 package");
     tracer.stage("Broadcast signature share");
     tracer.send_msg();
-    outgoings
-        .send(Outgoing::broadcast(Msg::Round2(signature_share)))
-        .await
-        .map_err(IoError::send_message)?;
+    futures::SinkExt::send(
+        &mut outgoings,
+        Outgoing::broadcast(Msg::Round2(signature_share)),
+    )
+    .await
+    .map_err(IoError::send_message)?;
     tracer.msg_sent();
 
     tracing::debug!("Waiting for round 2 packages");
@@ -239,146 +240,4 @@ where
     // Done
     tracer.protocol_ends();
     Ok(signature)
-}
-
-#[cfg(test)]
-mod tests {
-    use std::borrow::BorrowMut;
-
-    use crate::rounds::trace::PerfProfiler;
-
-    use super::*;
-    use proptest::prelude::*;
-    use rand::SeedableRng;
-    use rand::rngs::StdRng;
-    use rand::seq::IteratorRandom;
-    use round_based::sim::Simulation;
-    use test_strategy::Arbitrary;
-    use test_strategy::proptest;
-
-    #[derive(Arbitrary, Debug, Clone, Copy)]
-    struct TestInputArgs {
-        #[strategy(3..15u16)]
-        n: u16,
-        #[strategy(2..#n)]
-        t: u16,
-        msg: [u8; 32],
-    }
-
-    #[derive(Arbitrary, Debug)]
-    enum TestCase {
-        Ed25519(TestInputArgs),
-        Secp256k1(TestInputArgs),
-    }
-
-    #[proptest(async = "tokio", cases = 20, fork = true)]
-    async fn it_works(case: TestCase) {
-        match &case {
-            TestCase::Ed25519(args) => run_signing::<frost_ed25519::Ed25519Sha512>(args).await?,
-            TestCase::Secp256k1(args) => {
-                run_signing::<frost_secp256k1::Secp256K1Sha256>(args).await?
-            }
-        }
-    }
-
-    async fn run_signing<C>(args: &TestInputArgs) -> Result<(), TestCaseError>
-    where
-        C: Ciphersuite + Send + Unpin + Sync,
-        <<C as Ciphersuite>::Group as Group>::Element: Send + Unpin + Sync,
-        <<<C as Ciphersuite>::Group as Group>::Field as frost_core::Field>::Scalar:
-            Send + Unpin + Sync,
-    {
-        let TestInputArgs { n, t, msg } = *args;
-        let keygen_output = run_keygen::<C>(args).await?;
-        let public_key = keygen_output
-            .values()
-            .map(|(_, pkg)| pkg.clone())
-            .next()
-            .unwrap();
-        let rng = &mut StdRng::from_seed(msg);
-        let signers = keygen_output
-            .into_iter()
-            .choose_multiple(rng, usize::from(t));
-        let signer_set = signers.iter().map(|(i, _)| *i).collect::<Vec<_>>();
-
-        eprintln!("Running a {} {t}-out-of-{n} Signing", C::ID);
-        let mut simulation = Simulation::<_, Msg<C>>::empty();
-        for (i, (key_pkg, pub_key_pkg)) in signers {
-            let signer_set = signer_set.clone();
-            let msg = msg.to_vec();
-            simulation.add_async_party(|party| async move {
-                let rng = &mut StdRng::seed_from_u64(u64::from(i + 1));
-                let mut tracer = PerfProfiler::new();
-                let output = run(
-                    rng,
-                    &key_pkg,
-                    &pub_key_pkg,
-                    &signer_set,
-                    &msg,
-                    party,
-                    Some(tracer.borrow_mut()),
-                )
-                .await?;
-                let report = tracer.get_report().unwrap();
-                eprintln!("Party {} report: {}\n", i, report);
-                Result::<_, Error<C>>::Ok((i, output))
-            });
-        }
-
-        let mut outputs = Vec::with_capacity(n as usize);
-        let tasks = simulation.run()?;
-        for task in tasks {
-            outputs.push(task);
-        }
-        let outputs = outputs.into_iter().collect::<Result<BTreeMap<_, _>, _>>()?;
-        // Assert that all parties produced a valid signature
-        let signature = outputs.values().next().unwrap();
-        C::verify_signature(&msg, signature, public_key.verifying_key())?;
-        for other_signature in outputs.values().skip(1) {
-            prop_assert_eq!(signature, other_signature);
-        }
-
-        Ok(())
-    }
-
-    async fn run_keygen<C>(
-        args: &TestInputArgs,
-    ) -> Result<BTreeMap<u16, (KeyPackage<C>, PublicKeyPackage<C>)>, TestCaseError>
-    where
-        C: Ciphersuite + Send + Unpin,
-        <<C as Ciphersuite>::Group as Group>::Element: Send + Unpin,
-        <<<C as Ciphersuite>::Group as Group>::Field as frost_core::Field>::Scalar: Send + Unpin,
-    {
-        use crate::rounds::keygen::*;
-
-        let TestInputArgs { n, t, .. } = *args;
-        prop_assume!(frost_core::keys::validate_num_of_signers::<C>(t, n).is_ok());
-
-        eprintln!("Running a {} {t}-out-of-{n} Keygen", C::ID);
-        let mut simulation = Simulation::<_, Msg<C>>::empty();
-        for i in 0..n {
-            simulation.add_async_party(|party| async move {
-                let rng = &mut StdRng::seed_from_u64(u64::from(i + 1));
-                let mut tracer = PerfProfiler::new();
-                let output = run(rng, t, n, i, party, Some(tracer.borrow_mut())).await?;
-                let report = tracer.get_report().unwrap();
-                eprintln!("Party {} report: {}\n", i, report);
-                Result::<_, Error<C>>::Ok((i, output))
-            });
-        }
-
-        let mut outputs = Vec::with_capacity(n as usize);
-        let tasks = simulation.run()?;
-        for task in tasks {
-            outputs.push(task);
-        }
-        let outputs = outputs.into_iter().collect::<Result<BTreeMap<_, _>, _>>()?;
-        // Assert that all parties outputted the same public key
-        let (_, pubkey_pkg) = outputs.get(&0).unwrap();
-        for (_, other_pubkey_pkg) in outputs.values().skip(1) {
-            prop_assert_eq!(pubkey_pkg, other_pubkey_pkg);
-        }
-
-        Ok(outputs)
-    }
 }

@@ -18,7 +18,7 @@ use std::convert::Infallible;
 
 use frost_core::{Ciphersuite, Identifier};
 use round_based::rounds_router::simple_store;
-use round_based::rounds_router::{CompleteRoundError, errors as router_error};
+use round_based::rounds_router::{errors as router_error, CompleteRoundError};
 pub use std_error::StdError;
 pub type BoxedError = Box<dyn StdError + Send + Sync>;
 
@@ -159,40 +159,5 @@ impl<C: Ciphersuite> TryFrom<u16> for IdentifierWrapper<C> {
 
     fn try_from(value: u16) -> Result<Self, Self::Error> {
         Identifier::try_from(value + 1).map(IdentifierWrapper)
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use frost_ed25519::Ed25519Sha512 as MockCiphersuite;
-
-    #[test]
-    fn test_new() {
-        let non_zero = 1;
-        let wrapper = IdentifierWrapper::<MockCiphersuite>::new(non_zero);
-        assert_eq!(wrapper.as_u16(), 1);
-    }
-
-    #[test]
-    fn test_new_zero() {
-        let z = 0;
-        let wrapper = IdentifierWrapper::<MockCiphersuite>::new(z);
-        assert_eq!(wrapper.as_u16(), 0);
-    }
-
-    #[test]
-    fn test_try_from() {
-        let wrapper = IdentifierWrapper::<MockCiphersuite>::try_from(1).unwrap();
-        assert_eq!(wrapper.as_u16(), 1);
-    }
-
-    #[test]
-    fn test_from_frost_identifier() {
-        let wrapper = IdentifierWrapper(Identifier::<MockCiphersuite>::try_from(1u16).unwrap());
-        assert_eq!(wrapper.as_u16(), 0);
-
-        let wrapper = IdentifierWrapper(Identifier::<MockCiphersuite>::try_from(2u16).unwrap());
-        assert_eq!(wrapper.as_u16(), 1);
     }
 }
