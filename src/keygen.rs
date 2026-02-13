@@ -18,9 +18,9 @@ pub enum Error {
     #[error("Self not in operators")]
     SelfNotInOperators,
     #[error("Frost error: {0}")]
-    Frost(Box<dyn std::error::Error>),
+    Frost(String),
     #[error("Protocol error: {0}")]
-    Protocol(Box<dyn std::error::Error>),
+    Protocol(String),
     #[error(transparent)]
     SerdeJson(#[from] serde_json::Error),
     #[error(transparent)]
@@ -31,13 +31,13 @@ pub enum Error {
 
 impl<C: Ciphersuite> From<frost_core::Error<C>> for Error {
     fn from(e: frost_core::Error<C>) -> Self {
-        Error::Frost(Box::new(e))
+        Error::Frost(e.to_string())
     }
 }
 
 impl<C: Ciphersuite> From<keygen_protocol::Error<C>> for Error {
     fn from(e: keygen_protocol::Error<C>) -> Self {
-        Error::Protocol(Box::new(e))
+        Error::Protocol(e.to_string())
     }
 }
 

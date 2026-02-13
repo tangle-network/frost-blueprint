@@ -38,9 +38,17 @@ thiserror = "2"
 displaydoc = "0.2"
 
 # FROST
-frost-core = { version = "2.0", default-features = false, features = ["serialization", "cheater-detection"] }
-frost-ed25519 = { version = "2.0", default-features = false, features = ["serialization", "cheater-detection"] }
-frost-secp256k1 = { version = "2.0", default-features = false, features = ["serialization", "cheater-detection"] }
+frost-core = { workspace = true, default-features = false, features = ["serialization", "cheater-detection"] }
+frost-ed25519 = { workspace = true, default-features = false, features = ["serialization", "cheater-detection"] }
+frost-secp256k1 = { workspace = true, default-features = false, features = ["serialization", "cheater-detection"] }
+blueprint-sdk = { workspace = true, features = [
+    "tracing",
+    "tangle",
+    "networking",
+    "local-store",
+    "macros",
+    "round-based-compat",
+] }
 
 round-based = { version = "0.4.1", features = ["runtime-tokio", "derive"] }
 
