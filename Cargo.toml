@@ -1,16 +1,10 @@
 [package]
 name = "frost-blueprint"
-version = "0.1.1"
+version = "0.2.0"
 edition = "2021"
-description = "FROST Blueprint built using Tangle Gadget SDK"
+description = "FROST Blueprint built using Tangle Blueprint SDK"
 authors = ["Webb Technologies Inc."]
 license = "Unlicense"
-homepage = "https://github.com/tangle-network/frost-blueprint"
-repository = "https://github.com/tangle-network/frost-blueprint"
-readme = "README.md"
-categories = ["cryptography", "cryptography::cryptocurrencies"]
-keywords = ["tangle", "blueprint", "avs"]
-rust-version = "1.81"
 
 [lib]
 path = "src/lib.rs"
@@ -19,80 +13,45 @@ path = "src/lib.rs"
 name = "frost-blueprint"
 path = "src/main.rs"
 
-[package.metadata.blueprint]
-manager = { Evm = "FrostBlueprint" }
-
-# [[package.metadata.gadget.Native.sources]]
-# owner = "tangle-network"
-# repo = "frost-blueprint"
-# tag = "0.1.0"
-# binaries = [
-#     { arch = "Arm64", os = "Macos", name = "frost-blueprint-aarch64-apple-darwin.tar.xz" },
-#     { arch = "Amd64", os = "Macos", name = "frost-blueprint-x86_64-apple-darwin.tar.xz" },
-#     { arch = "Amd64", os = "Macos", name = "frost-blueprint-x86_64-unknown-linux-gnu.tar.xz" },
-# ]
-
 [dependencies]
-tracing = "0.1"
-thiserror = "1.0"
-displaydoc = "0.2.5"
-async-trait = "0.1"
-color-eyre = "0.6"
-structopt = "0.3.26"
+blueprint-sdk = { git = "https://github.com/tangle-network/blueprint.git", branch = "main", default-features = false, features = [
+    "std",
+    "tracing",
+    "macros",
+    "tangle",
+    "networking",
+    "local-store",
+    "round-based-compat",
+] }
+crossbeam-channel = "0.5"
 hex = "0.4"
-k256 = { version = "0.13.4" }
-tokio = { version = "^1", default-features = false, features = ["full", "rt-multi-thread"] }
-tokio-stream = { version = "0.1", default-features = false }
-tracing-subscriber = { version = "0.3", features = ["parking_lot", "env-filter"] }
-serde = { version = "^1", default-features = false, features = ["alloc"] }
-serde_json = { version = "1.0", default-features = false, features = ["alloc"] }
-rand_chacha = { version = "0.3.1", default-features = false }
+tokio = { version = "1", default-features = false, features = ["sync", "rt"] }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+rand = "0.8"
+rand_chacha = "0.3"
+futures = "0.3"
+libp2p = { version = "0.54", default-features = false }
+thiserror = "2"
+displaydoc = "0.2"
 
 # FROST
 frost-core = { version = "2.0", default-features = false, features = ["serialization", "cheater-detection"] }
 frost-ed25519 = { version = "2.0", default-features = false, features = ["serialization", "cheater-detection"] }
 frost-secp256k1 = { version = "2.0", default-features = false, features = ["serialization", "cheater-detection"] }
 
-sled = { version = "0.34", default-features = false, optional = true }
-round-based = { version = "0.3.0", default-features = false, features = ["derive"] }
-
-
-[dependencies.gadget-sdk]
-version = "0.6.1"
-default-features = false
-features = ["getrandom"]
+round-based = { version = "0.4.1", features = ["runtime-tokio", "derive"] }
 
 [dev-dependencies]
-tokio = { version = "^1", default-features = false, features = ["full", "rt-multi-thread"] }
-frost-core = { version = "2.0", default-features = false, features = [
-    "serialization",
-    "cheater-detection",
-    "internals",
-] }
-round-based = { version = "0.3.0", default-features = false, features = ["derive", "dev"] }
-proptest = { version = "1.5.0", default-features = false, features = ["std", "bit-set", "fork", "timeout"] }
-test-strategy = { version = "0.4.0", default-features = false }
-
-cargo-tangle = "0.3.2"
-blueprint-test-utils = { version = "0.2.1", default-features = false, features = ["std"] }
-
-alloy-primitives = "0.8.14"
-alloy-provider = { version = "0.5.4", default-features = false, features = ["reqwest", "ws"] }
-alloy-signer = { version = "0.7.3" }
-alloy-signer-local = { version = "0.5.4" }
-alloy-rpc-client = "0.5.4"
-alloy-network = { version = "0.5.4" }
-alloy-json-abi = "0.8.14"
-alloy-sol-types = "0.8.14"
-alloy-contract = { version = "0.5.4" }
-
-[build-dependencies]
-blueprint-metadata = "0.2.0"
+blueprint-sdk = { git = "https://github.com/tangle-network/blueprint.git", branch = "main", default-features = false, features = ["std", "tangle", "testing", "networking", "round-based-compat"] }
+tokio = { version = "1", features = ["macros", "rt-multi-thread", "test-util"] }
+tracing-subscriber = "0.3"
 
 [features]
-default = ["std", "kv-sled"]
+default = ["std"]
 std = [
-    "gadget-sdk/std",
     "frost-core/std",
     "frost-ed25519/std",
     "frost-secp256k1/std",
@@ -100,13 +59,3 @@ std = [
     "serde/std",
     "rand_chacha/std",
 ]
-kv-sled = ["sled"]
-kv-mem = []
-
-# Internal features for end-to-end tests
-e2e = []
-
-# The profile that 'dist' will build with
-[profile.dist]
-inherits = "release"
-lto = "thin"

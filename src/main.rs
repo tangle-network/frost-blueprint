@@ -1,61 +1,58 @@
-use color_eyre::eyre;
-use color_eyre::Result;
-use frost_blueprint as blueprint;
-use gadget_sdk::{
-    self as sdk,
-    runners::{tangle::TangleConfig, BlueprintConfig, BlueprintRunner},
-};
-use tracing::Instrument;
+use blueprint_sdk::contexts::tangle::TangleClientContext;
+use blueprint_sdk::runner::BlueprintRunner;
+use blueprint_sdk::runner::config::BlueprintEnvironment;
+use blueprint_sdk::runner::tangle::config::TangleConfig;
+use blueprint_sdk::tangle::{TangleConsumer, TangleProducer};
+use blueprint_sdk::info;
+use frost_blueprint::FrostContext;
+use frost_blueprint::router;
 
-#[sdk::main(env)]
-#[tracing::instrument(skip(env), name = "frost_blueprint", err)]
-async fn main() -> Result<()> {
-    color_eyre::install()?;
+#[tokio::main]
+async fn main() -> Result<(), blueprint_sdk::Error> {
+    setup_log();
 
-    let tangle = env
-        .protocol_specific
+    let env = BlueprintEnvironment::load()?;
+
+    FrostContext::init(&env)
+        .await
+        .map_err(|e| blueprint_sdk::Error::Other(e))?;
+
+    let tangle_client = env
+        .tangle_client()
+        .await
+        .map_err(|e| blueprint_sdk::Error::Other(e.to_string()))?;
+
+    let service_id = env
+        .protocol_settings
         .tangle()
-        .map_err(|e| eyre::eyre!("Failed to get tangle configuration: {}", e))?;
-    let config = TangleConfig::default();
+        .map_err(|e| blueprint_sdk::Error::Other(e.to_string()))?
+        .service_id
+        .ok_or_else(|| blueprint_sdk::Error::Other("SERVICE_ID missing".into()))?;
 
-    let context = blueprint::FrostContext::new(env.clone())?;
+    info!("Starting FROST blueprint for service {service_id}");
 
-    let service_id = match tangle.service_id {
-        Some(service_id) => service_id,
-        None if config.requires_registration(&env).await? => {
-            sdk::info!("Running in registration mode, so no service ID is required.");
-            0
-        }
-        None => {
-            sdk::error!("Service ID not found, exiting...");
-            return Ok(());
-        }
-    };
+    let tangle_producer = TangleProducer::new(tangle_client.clone(), service_id);
+    let tangle_consumer = TangleConsumer::new(tangle_client);
+    let tangle_config = TangleConfig::default();
 
-    let client = env.client().await?;
-    let signer = env.first_sr25519_signer()?;
-
-    let keygen = blueprint::keygen::KeygenEventHandler {
-        service_id,
-        client: client.clone(),
-        signer: signer.clone(),
-        context: context.clone(),
-    };
-
-    let sign = blueprint::sign::SignEventHandler {
-        service_id,
-        client,
-        signer,
-        context,
-    };
-
-    sdk::info!("Starting the event watcher ...");
-    BlueprintRunner::new(config, env)
-        .job(keygen)
-        .job(sign)
+    BlueprintRunner::builder(tangle_config, env)
+        .router(router())
+        .producer(tangle_producer)
+        .consumer(tangle_consumer)
+        .with_shutdown_handler(async {
+            info!("Shutting down FROST blueprint");
+        })
         .run()
-        .in_current_span()
         .await?;
-    sdk::info!("Exiting...");
+
     Ok(())
+}
+
+fn setup_log() {
+    use tracing_subscriber::prelude::*;
+    use tracing_subscriber::{EnvFilter, fmt};
+    let _ = tracing_subscriber::registry()
+        .with(fmt::layer())
+        .with(EnvFilter::from_default_env())
+        .try_init();
 }
