@@ -113,7 +113,7 @@ pub async fn sign(
                 msg,
             )
             .await
-            .and_then(|s| s.serialize().map_err(|e| Error::Frost(Box::new(e))))
+            .and_then(|s| s.serialize().map_err(|e| Error::Frost(e.to_string())))
         }
         frost_secp256k1::Secp256K1Sha256::ID => {
             let entry: crate::keygen::KeygenEntry<frost_secp256k1::Secp256K1Sha256> =
@@ -129,7 +129,7 @@ pub async fn sign(
                 msg,
             )
             .await
-            .and_then(|s| s.serialize().map_err(|e| Error::Frost(Box::new(e))))
+            .and_then(|s| s.serialize().map_err(|e| Error::Frost(e.to_string())))
         }
         _ => return Err(format!("Unknown ciphersuite: {ciphersuite}")),
     };

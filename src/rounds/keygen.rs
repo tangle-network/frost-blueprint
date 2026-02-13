@@ -1,6 +1,5 @@
 use std::collections::BTreeMap;
 
-use blueprint_sdk as sdk;
 use frost_core::keys::dkg::round2::Package as Round2Package;
 use frost_core::keys::{KeyPackage, dkg::round1::Package as Round1Package};
 use frost_core::keys::{PublicKeyPackage, dkg};
