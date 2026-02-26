@@ -934,6 +934,18 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5f0e0fee31ef5ed1ba1316088939cea399010ed7731dba877ed44aeb407a75ea"
 
 [[package]]
+name = "argon2"
+version = "0.5.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3c3610892ee6e0cbce8ae2700349fcf8f98adb0dbfbee85aec3c9179d29cc072"
+dependencies = [
+ "base64ct",
+ "blake2",
+ "cpufeatures",
+ "password-hash",
+]
+
+[[package]]
 name = "ark-bls12-377"
 version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2044,7 +2056,7 @@ dependencies = [
 [[package]]
 name = "blueprint-anvil-testing-utils"
 version = "0.1.0-alpha.21"
-source = "git+https://github.com/tangle-network/blueprint.git?branch=main#3e6b576ebad23d2b5d12b6d3c3422189d8b47852"
+source = "git+https://github.com/tangle-network/blueprint.git?branch=main#28ade72168708fdfa03f628100a6c2853043b7d7"
 dependencies = [
  "alloy-consensus",
  "alloy-eips",
@@ -2082,7 +2094,7 @@ dependencies = [
 [[package]]
 name = "blueprint-auth"
 version = "0.1.0-alpha.10"
-source = "git+https://github.com/tangle-network/blueprint.git?branch=main#3e6b576ebad23d2b5d12b6d3c3422189d8b47852"
+source = "git+https://github.com/tangle-network/blueprint.git?branch=main#28ade72168708fdfa03f628100a6c2853043b7d7"
 dependencies = [
  "axum",
  "base64 0.22.1",
@@ -2091,7 +2103,7 @@ dependencies = [
  "blueprint-std",
  "chacha20poly1305",
  "crc32fast",
- "hashbrown 0.15.5",
+ "hashbrown 0.16.1",
  "hex",
  "hyper 1.8.1",
  "hyper-rustls 0.27.7",
@@ -2126,7 +2138,7 @@ dependencies = [
 [[package]]
 name = "blueprint-chain-setup"
 version = "0.1.0-alpha.21"
-source = "git+https://github.com/tangle-network/blueprint.git?branch=main#3e6b576ebad23d2b5d12b6d3c3422189d8b47852"
+source = "git+https://github.com/tangle-network/blueprint.git?branch=main#28ade72168708fdfa03f628100a6c2853043b7d7"
 dependencies = [
  "blueprint-chain-setup-anvil",
 ]
@@ -2134,7 +2146,7 @@ dependencies = [
 [[package]]
 name = "blueprint-chain-setup-anvil"
 version = "0.1.0-alpha.21"
-source = "git+https://github.com/tangle-network/blueprint.git?branch=main#3e6b576ebad23d2b5d12b6d3c3422189d8b47852"
+source = "git+https://github.com/tangle-network/blueprint.git?branch=main#28ade72168708fdfa03f628100a6c2853043b7d7"
 dependencies = [
  "alloy-contract",
  "alloy-provider",
@@ -2156,7 +2168,7 @@ dependencies = [
 [[package]]
 name = "blueprint-client-core"
 version = "0.1.0-alpha.4"
-source = "git+https://github.com/tangle-network/blueprint.git?branch=main#3e6b576ebad23d2b5d12b6d3c3422189d8b47852"
+source = "git+https://github.com/tangle-network/blueprint.git?branch=main#28ade72168708fdfa03f628100a6c2853043b7d7"
 dependencies = [
  "auto_impl",
  "blueprint-std",
@@ -2166,7 +2178,7 @@ dependencies = [
 [[package]]
 name = "blueprint-client-eigenlayer"
 version = "0.1.0-alpha.20"
-source = "git+https://github.com/tangle-network/blueprint.git?branch=main#3e6b576ebad23d2b5d12b6d3c3422189d8b47852"
+source = "git+https://github.com/tangle-network/blueprint.git?branch=main#28ade72168708fdfa03f628100a6c2853043b7d7"
 dependencies = [
  "alloy-contract",
  "alloy-network",
@@ -2189,7 +2201,7 @@ dependencies = [
 [[package]]
 name = "blueprint-client-evm"
 version = "0.1.0-alpha.7"
-source = "git+https://github.com/tangle-network/blueprint.git?branch=main#3e6b576ebad23d2b5d12b6d3c3422189d8b47852"
+source = "git+https://github.com/tangle-network/blueprint.git?branch=main#28ade72168708fdfa03f628100a6c2853043b7d7"
 dependencies = [
  "alloy-consensus",
  "alloy-json-rpc",
@@ -2216,7 +2228,7 @@ dependencies = [
 [[package]]
 name = "blueprint-client-tangle"
 version = "0.1.1"
-source = "git+https://github.com/tangle-network/blueprint.git?branch=main#3e6b576ebad23d2b5d12b6d3c3422189d8b47852"
+source = "git+https://github.com/tangle-network/blueprint.git?branch=main#28ade72168708fdfa03f628100a6c2853043b7d7"
 dependencies = [
  "alloy-contract",
  "alloy-network",
@@ -2247,7 +2259,7 @@ dependencies = [
 [[package]]
 name = "blueprint-clients"
 version = "0.1.0-alpha.21"
-source = "git+https://github.com/tangle-network/blueprint.git?branch=main#3e6b576ebad23d2b5d12b6d3c3422189d8b47852"
+source = "git+https://github.com/tangle-network/blueprint.git?branch=main#28ade72168708fdfa03f628100a6c2853043b7d7"
 dependencies = [
  "blueprint-client-core",
  "blueprint-client-eigenlayer",
@@ -2260,7 +2272,7 @@ dependencies = [
 [[package]]
 name = "blueprint-context-derive"
 version = "0.1.0-alpha.13"
-source = "git+https://github.com/tangle-network/blueprint.git?branch=main#3e6b576ebad23d2b5d12b6d3c3422189d8b47852"
+source = "git+https://github.com/tangle-network/blueprint.git?branch=main#28ade72168708fdfa03f628100a6c2853043b7d7"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -2270,7 +2282,7 @@ dependencies = [
 [[package]]
 name = "blueprint-contexts"
 version = "0.1.0-alpha.21"
-source = "git+https://github.com/tangle-network/blueprint.git?branch=main#3e6b576ebad23d2b5d12b6d3c3422189d8b47852"
+source = "git+https://github.com/tangle-network/blueprint.git?branch=main#28ade72168708fdfa03f628100a6c2853043b7d7"
 dependencies = [
  "blueprint-client-tangle",
  "blueprint-clients",
@@ -2284,11 +2296,11 @@ dependencies = [
 [[package]]
 name = "blueprint-core"
 version = "0.1.0-alpha.5"
-source = "git+https://github.com/tangle-network/blueprint.git?branch=main#3e6b576ebad23d2b5d12b6d3c3422189d8b47852"
+source = "git+https://github.com/tangle-network/blueprint.git?branch=main#28ade72168708fdfa03f628100a6c2853043b7d7"
 dependencies = [
  "bytes",
  "futures-util",
- "hashbrown 0.15.5",
+ "hashbrown 0.16.1",
  "pin-project-lite",
  "tiny-keccak",
  "tower",
@@ -2298,7 +2310,7 @@ dependencies = [
 [[package]]
 name = "blueprint-core-testing-utils"
 version = "0.1.0-alpha.21"
-source = "git+https://github.com/tangle-network/blueprint.git?branch=main#3e6b576ebad23d2b5d12b6d3c3422189d8b47852"
+source = "git+https://github.com/tangle-network/blueprint.git?branch=main#28ade72168708fdfa03f628100a6c2853043b7d7"
 dependencies = [
  "blueprint-auth",
  "blueprint-clients",
@@ -2318,7 +2330,7 @@ dependencies = [
 [[package]]
 name = "blueprint-crypto"
 version = "0.1.0-alpha.14"
-source = "git+https://github.com/tangle-network/blueprint.git?branch=main#3e6b576ebad23d2b5d12b6d3c3422189d8b47852"
+source = "git+https://github.com/tangle-network/blueprint.git?branch=main#28ade72168708fdfa03f628100a6c2853043b7d7"
 dependencies = [
  "blueprint-crypto-bls",
  "blueprint-crypto-bn254",
@@ -2333,7 +2345,7 @@ dependencies = [
 [[package]]
 name = "blueprint-crypto-bls"
 version = "0.1.0-alpha.9"
-source = "git+https://github.com/tangle-network/blueprint.git?branch=main#3e6b576ebad23d2b5d12b6d3c3422189d8b47852"
+source = "git+https://github.com/tangle-network/blueprint.git?branch=main#28ade72168708fdfa03f628100a6c2853043b7d7"
 dependencies = [
  "ark-serialize 0.5.0",
  "blueprint-crypto-core",
@@ -2349,7 +2361,7 @@ dependencies = [
 [[package]]
 name = "blueprint-crypto-bn254"
 version = "0.1.0-alpha.9"
-source = "git+https://github.com/tangle-network/blueprint.git?branch=main#3e6b576ebad23d2b5d12b6d3c3422189d8b47852"
+source = "git+https://github.com/tangle-network/blueprint.git?branch=main#28ade72168708fdfa03f628100a6c2853043b7d7"
 dependencies = [
  "ark-bn254",
  "ark-ec",
@@ -2369,7 +2381,7 @@ dependencies = [
 [[package]]
 name = "blueprint-crypto-core"
 version = "0.1.0-alpha.9"
-source = "git+https://github.com/tangle-network/blueprint.git?branch=main#3e6b576ebad23d2b5d12b6d3c3422189d8b47852"
+source = "git+https://github.com/tangle-network/blueprint.git?branch=main#28ade72168708fdfa03f628100a6c2853043b7d7"
 dependencies = [
  "blueprint-std",
  "clap",
@@ -2380,7 +2392,7 @@ dependencies = [
 [[package]]
 name = "blueprint-crypto-ed25519"
 version = "0.1.0-alpha.10"
-source = "git+https://github.com/tangle-network/blueprint.git?branch=main#3e6b576ebad23d2b5d12b6d3c3422189d8b47852"
+source = "git+https://github.com/tangle-network/blueprint.git?branch=main#28ade72168708fdfa03f628100a6c2853043b7d7"
 dependencies = [
  "blueprint-crypto-core",
  "blueprint-std",
@@ -2394,10 +2406,12 @@ dependencies = [
 [[package]]
 name = "blueprint-crypto-hashing"
 version = "0.1.0-alpha.5"
-source = "git+https://github.com/tangle-network/blueprint.git?branch=main#3e6b576ebad23d2b5d12b6d3c3422189d8b47852"
+source = "git+https://github.com/tangle-network/blueprint.git?branch=main#28ade72168708fdfa03f628100a6c2853043b7d7"
 dependencies = [
+ "argon2",
  "blake3",
  "blueprint-std",
+ "hkdf",
  "sha2 0.10.9",
  "sha3",
 ]
@@ -2405,7 +2419,7 @@ dependencies = [
 [[package]]
 name = "blueprint-crypto-k256"
 version = "0.1.0-alpha.10"
-source = "git+https://github.com/tangle-network/blueprint.git?branch=main#3e6b576ebad23d2b5d12b6d3c3422189d8b47852"
+source = "git+https://github.com/tangle-network/blueprint.git?branch=main#28ade72168708fdfa03f628100a6c2853043b7d7"
 dependencies = [
  "alloy-primitives",
  "alloy-signer-local",
@@ -2421,7 +2435,7 @@ dependencies = [
 [[package]]
 name = "blueprint-crypto-sr25519"
 version = "0.1.0-alpha.10"
-source = "git+https://github.com/tangle-network/blueprint.git?branch=main#3e6b576ebad23d2b5d12b6d3c3422189d8b47852"
+source = "git+https://github.com/tangle-network/blueprint.git?branch=main#28ade72168708fdfa03f628100a6c2853043b7d7"
 dependencies = [
  "blueprint-crypto-core",
  "blueprint-std",
@@ -2435,7 +2449,7 @@ dependencies = [
 [[package]]
 name = "blueprint-eigenlayer-extra"
 version = "0.1.0-alpha.13"
-source = "git+https://github.com/tangle-network/blueprint.git?branch=main#3e6b576ebad23d2b5d12b6d3c3422189d8b47852"
+source = "git+https://github.com/tangle-network/blueprint.git?branch=main#28ade72168708fdfa03f628100a6c2853043b7d7"
 dependencies = [
  "alloy",
  "alloy-contract",
@@ -2468,7 +2482,7 @@ dependencies = [
 [[package]]
 name = "blueprint-evm-extra"
 version = "0.1.0-alpha.8"
-source = "git+https://github.com/tangle-network/blueprint.git?branch=main#3e6b576ebad23d2b5d12b6d3c3422189d8b47852"
+source = "git+https://github.com/tangle-network/blueprint.git?branch=main#28ade72168708fdfa03f628100a6c2853043b7d7"
 dependencies = [
  "alloy-consensus",
  "alloy-network",
@@ -2499,7 +2513,7 @@ dependencies = [
 [[package]]
 name = "blueprint-keystore"
 version = "0.1.0-alpha.15"
-source = "git+https://github.com/tangle-network/blueprint.git?branch=main#3e6b576ebad23d2b5d12b6d3c3422189d8b47852"
+source = "git+https://github.com/tangle-network/blueprint.git?branch=main#28ade72168708fdfa03f628100a6c2853043b7d7"
 dependencies = [
  "alloy-network",
  "alloy-primitives",
@@ -2532,7 +2546,7 @@ dependencies = [
 [[package]]
 name = "blueprint-macros"
 version = "0.1.0-alpha.7"
-source = "git+https://github.com/tangle-network/blueprint.git?branch=main#3e6b576ebad23d2b5d12b6d3c3422189d8b47852"
+source = "git+https://github.com/tangle-network/blueprint.git?branch=main#28ade72168708fdfa03f628100a6c2853043b7d7"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -2542,7 +2556,7 @@ dependencies = [
 [[package]]
 name = "blueprint-manager-bridge"
 version = "0.1.0-alpha.9"
-source = "git+https://github.com/tangle-network/blueprint.git?branch=main#3e6b576ebad23d2b5d12b6d3c3422189d8b47852"
+source = "git+https://github.com/tangle-network/blueprint.git?branch=main#28ade72168708fdfa03f628100a6c2853043b7d7"
 dependencies = [
  "blueprint-auth",
  "blueprint-core",
@@ -2561,7 +2575,7 @@ dependencies = [
 [[package]]
 name = "blueprint-metrics-rpc-calls"
 version = "0.1.0-alpha.3"
-source = "git+https://github.com/tangle-network/blueprint.git?branch=main#3e6b576ebad23d2b5d12b6d3c3422189d8b47852"
+source = "git+https://github.com/tangle-network/blueprint.git?branch=main#28ade72168708fdfa03f628100a6c2853043b7d7"
 dependencies = [
  "metrics",
 ]
@@ -2569,7 +2583,7 @@ dependencies = [
 [[package]]
 name = "blueprint-networking"
 version = "0.1.0-alpha.15"
-source = "git+https://github.com/tangle-network/blueprint.git?branch=main#3e6b576ebad23d2b5d12b6d3c3422189d8b47852"
+source = "git+https://github.com/tangle-network/blueprint.git?branch=main#28ade72168708fdfa03f628100a6c2853043b7d7"
 dependencies = [
  "alloy-primitives",
  "bincode",
@@ -2594,7 +2608,7 @@ dependencies = [
 [[package]]
 name = "blueprint-networking-round-based-extension"
 version = "0.1.0-alpha.16"
-source = "git+https://github.com/tangle-network/blueprint.git?branch=main#3e6b576ebad23d2b5d12b6d3c3422189d8b47852"
+source = "git+https://github.com/tangle-network/blueprint.git?branch=main#28ade72168708fdfa03f628100a6c2853043b7d7"
 dependencies = [
  "blueprint-core",
  "blueprint-crypto",
@@ -2616,7 +2630,7 @@ dependencies = [
 [[package]]
 name = "blueprint-producers-extra"
 version = "0.1.0-alpha.6"
-source = "git+https://github.com/tangle-network/blueprint.git?branch=main#3e6b576ebad23d2b5d12b6d3c3422189d8b47852"
+source = "git+https://github.com/tangle-network/blueprint.git?branch=main#28ade72168708fdfa03f628100a6c2853043b7d7"
 dependencies = [
  "blueprint-core",
  "document-features",
@@ -2626,7 +2640,7 @@ dependencies = [
 [[package]]
 name = "blueprint-qos"
 version = "0.1.0-alpha.6"
-source = "git+https://github.com/tangle-network/blueprint.git?branch=main#3e6b576ebad23d2b5d12b6d3c3422189d8b47852"
+source = "git+https://github.com/tangle-network/blueprint.git?branch=main#28ade72168708fdfa03f628100a6c2853043b7d7"
 dependencies = [
  "alloy-network",
  "alloy-primitives",
@@ -2671,13 +2685,13 @@ dependencies = [
 [[package]]
 name = "blueprint-router"
 version = "0.1.0-alpha.6"
-source = "git+https://github.com/tangle-network/blueprint.git?branch=main#3e6b576ebad23d2b5d12b6d3c3422189d8b47852"
+source = "git+https://github.com/tangle-network/blueprint.git?branch=main#28ade72168708fdfa03f628100a6c2853043b7d7"
 dependencies = [
  "blueprint-core",
  "bytes",
  "document-features",
  "futures",
- "hashbrown 0.15.5",
+ "hashbrown 0.16.1",
  "pin-project-lite",
  "tower",
 ]
@@ -2685,7 +2699,7 @@ dependencies = [
 [[package]]
 name = "blueprint-runner"
 version = "0.1.0-alpha.20"
-source = "git+https://github.com/tangle-network/blueprint.git?branch=main#3e6b576ebad23d2b5d12b6d3c3422189d8b47852"
+source = "git+https://github.com/tangle-network/blueprint.git?branch=main#28ade72168708fdfa03f628100a6c2853043b7d7"
 dependencies = [
  "alloy-contract",
  "alloy-primitives",
@@ -2725,7 +2739,7 @@ dependencies = [
 [[package]]
 name = "blueprint-sdk"
 version = "0.1.0-alpha.22"
-source = "git+https://github.com/tangle-network/blueprint.git?branch=main#3e6b576ebad23d2b5d12b6d3c3422189d8b47852"
+source = "git+https://github.com/tangle-network/blueprint.git?branch=main#28ade72168708fdfa03f628100a6c2853043b7d7"
 dependencies = [
  "alloy",
  "blueprint-auth",
@@ -2760,7 +2774,7 @@ dependencies = [
 [[package]]
 name = "blueprint-std"
 version = "0.1.0-alpha.4"
-source = "git+https://github.com/tangle-network/blueprint.git?branch=main#3e6b576ebad23d2b5d12b6d3c3422189d8b47852"
+source = "git+https://github.com/tangle-network/blueprint.git?branch=main#28ade72168708fdfa03f628100a6c2853043b7d7"
 dependencies = [
  "colored",
  "num-traits",
@@ -2771,7 +2785,7 @@ dependencies = [
 [[package]]
 name = "blueprint-store-local-database"
 version = "0.1.0-alpha.7"
-source = "git+https://github.com/tangle-network/blueprint.git?branch=main#3e6b576ebad23d2b5d12b6d3c3422189d8b47852"
+source = "git+https://github.com/tangle-network/blueprint.git?branch=main#28ade72168708fdfa03f628100a6c2853043b7d7"
 dependencies = [
  "blueprint-std",
  "serde",
@@ -2782,7 +2796,7 @@ dependencies = [
 [[package]]
 name = "blueprint-stores"
 version = "0.1.0-alpha.8"
-source = "git+https://github.com/tangle-network/blueprint.git?branch=main#3e6b576ebad23d2b5d12b6d3c3422189d8b47852"
+source = "git+https://github.com/tangle-network/blueprint.git?branch=main#28ade72168708fdfa03f628100a6c2853043b7d7"
 dependencies = [
  "blueprint-store-local-database",
  "document-features",
@@ -2792,7 +2806,7 @@ dependencies = [
 [[package]]
 name = "blueprint-tangle-extra"
 version = "0.1.1"
-source = "git+https://github.com/tangle-network/blueprint.git?branch=main#3e6b576ebad23d2b5d12b6d3c3422189d8b47852"
+source = "git+https://github.com/tangle-network/blueprint.git?branch=main#28ade72168708fdfa03f628100a6c2853043b7d7"
 dependencies = [
  "alloy-primitives",
  "alloy-rpc-types",
@@ -2813,7 +2827,7 @@ dependencies = [
 [[package]]
 name = "blueprint-testing-utils"
 version = "0.1.0-alpha.20"
-source = "git+https://github.com/tangle-network/blueprint.git?branch=main#3e6b576ebad23d2b5d12b6d3c3422189d8b47852"
+source = "git+https://github.com/tangle-network/blueprint.git?branch=main#28ade72168708fdfa03f628100a6c2853043b7d7"
 dependencies = [
  "blueprint-anvil-testing-utils",
  "blueprint-core-testing-utils",
@@ -6648,11 +6662,21 @@ dependencies = [
 
 [[package]]
 name = "objc2-core-foundation"
-version = "0.3.2"
+version = "0.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2a180dd8642fa45cdb7dd721cd4c11b1cadd4929ce112ebd8b9f5803cc79d536"
+checksum = "1c10c2894a6fed806ade6027bcd50662746363a9589d3ec9d9bef30a4e4bc166"
 dependencies = [
  "bitflags 2.10.0",
+]
+
+[[package]]
+name = "objc2-io-kit"
+version = "0.3.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "71c1c64d6120e51cd86033f67176b1cb66780c2efe34dec55176f77befd93c0a"
+dependencies = [
+ "libc",
+ "objc2-core-foundation",
 ]
 
 [[package]]
@@ -8767,15 +8791,16 @@ dependencies = [
 
 [[package]]
 name = "sysinfo"
-version = "0.34.2"
+version = "0.38.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a4b93974b3d3aeaa036504b8eefd4c039dced109171c1ae973f1dc63b2c7e4b2"
+checksum = "1efc19935b4b66baa6f654ac7924c192f55b175c00a7ab72410fc24284dacda8"
 dependencies = [
  "libc",
  "memchr",
  "ntapi",
  "objc2-core-foundation",
- "windows 0.57.0",
+ "objc2-io-kit",
+ "windows 0.62.2",
 ]
 
 [[package]]
@@ -9007,9 +9032,9 @@ dependencies = [
 
 [[package]]
 name = "tnt-core-bindings"
-version = "0.10.0"
+version = "0.10.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9e6962f87d3167a91f04623b79aac6cfaed814768923cd63947642ac3ab1fce7"
+checksum = "49957ef799873b6ae506f4e84387709ab7deae38734901f8cdc70cc775584e8f"
 dependencies = [
  "alloy",
  "alloy-contract",
@@ -9895,12 +9920,23 @@ dependencies = [
 
 [[package]]
 name = "windows"
-version = "0.57.0"
+version = "0.62.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "12342cb4d8e3b046f3d80effd474a7a02447231330ef77d71daa6fbc40681143"
+checksum = "527fadee13e0c05939a6a05d5bd6eec6cd2e3dbd648b9f8e447c6518133d8580"
 dependencies = [
- "windows-core 0.57.0",
- "windows-targets 0.52.6",
+ "windows-collections",
+ "windows-core 0.62.2",
+ "windows-future",
+ "windows-numerics",
+]
+
+[[package]]
+name = "windows-collections"
+version = "0.3.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "23b2d95af1a8a14a3c7367e1ed4fc9c20e0a26e79551b1454d72583c97cc6610"
+dependencies = [
+ "windows-core 0.62.2",
 ]
 
 [[package]]
@@ -9915,38 +9951,26 @@ dependencies = [
 
 [[package]]
 name = "windows-core"
-version = "0.57.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d2ed2439a290666cd67ecce2b0ffaad89c2a56b976b736e6ece670297897832d"
-dependencies = [
- "windows-implement 0.57.0",
- "windows-interface 0.57.0",
- "windows-result 0.1.2",
- "windows-targets 0.52.6",
-]
-
-[[package]]
-name = "windows-core"
 version = "0.62.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b8e83a14d34d0623b51dce9581199302a221863196a1dde71a7663a4c2be9deb"
 dependencies = [
- "windows-implement 0.60.2",
- "windows-interface 0.59.3",
+ "windows-implement",
+ "windows-interface",
  "windows-link",
  "windows-result 0.4.1",
  "windows-strings",
 ]
 
 [[package]]
-name = "windows-implement"
-version = "0.57.0"
+name = "windows-future"
+version = "0.3.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9107ddc059d5b6fbfbffdfa7a7fe3e22a226def0b2608f72e9d552763d3e1ad7"
+checksum = "e1d6f90251fe18a279739e78025bd6ddc52a7e22f921070ccdc67dde84c605cb"
 dependencies = [
- "proc-macro2",
- "quote",
- "syn 2.0.115",
+ "windows-core 0.62.2",
+ "windows-link",
+ "windows-threading",
 ]
 
 [[package]]
@@ -9954,17 +9978,6 @@ name = "windows-implement"
 version = "0.60.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "053e2e040ab57b9dc951b72c264860db7eb3b0200ba345b4e4c3b14f67855ddf"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn 2.0.115",
-]
-
-[[package]]
-name = "windows-interface"
-version = "0.57.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "29bee4b38ea3cde66011baa44dba677c432a78593e202392d1e9070cf2a7fca7"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -9987,6 +10000,16 @@ name = "windows-link"
 version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f0805222e57f7521d6a62e36fa9163bc891acd422f971defe97d64e70d0a4fe5"
+
+[[package]]
+name = "windows-numerics"
+version = "0.3.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6e2e40844ac143cdb44aead537bbf727de9b044e107a0f1220392177d15b0f26"
+dependencies = [
+ "windows-core 0.62.2",
+ "windows-link",
+]
 
 [[package]]
 name = "windows-registry"
@@ -10117,6 +10140,15 @@ dependencies = [
  "windows_x86_64_gnu 0.53.1",
  "windows_x86_64_gnullvm 0.53.1",
  "windows_x86_64_msvc 0.53.1",
+]
+
+[[package]]
+name = "windows-threading"
+version = "0.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3949bd5b99cafdf1c7ca86b43ca564028dfe27d66958f2470940f73d86d75b37"
+dependencies = [
+ "windows-link",
 ]
 
 [[package]]
