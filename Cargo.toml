@@ -14,7 +14,7 @@ name = "frost-blueprint"
 path = "src/main.rs"
 
 [dependencies]
-blueprint-sdk = { version = "0.2.0-alpha.5", default-features = false, features = [
+blueprint-sdk = { version = "0.2.0-alpha.6", default-features = false, features = [
     "std",
     "tracing",
     "macros",
@@ -45,7 +45,7 @@ frost-secp256k1 = { version = "2.0", default-features = false, features = ["seri
 round-based = { version = "0.4.1", features = ["runtime-tokio", "derive"] }
 
 [dev-dependencies]
-blueprint-sdk = { version = "0.2.0-alpha.5", default-features = false, features = ["std", "tangle", "testing", "networking", "round-based-compat"] }
+blueprint-sdk = { version = "0.2.0-alpha.6", default-features = false, features = ["std", "tangle", "testing", "networking", "round-based-compat"] }
 tokio = { version = "1", features = ["macros", "rt-multi-thread", "test-util"] }
 tracing-subscriber = "0.3"
 

@@ -16,5 +16,5 @@ remappings_location = "txt"
 remappings_version = false
 
 [dependencies]
-tnt-core = "0.10.1"
+tnt-core = "0.13.0"
 forge-std = "1.9.6"
