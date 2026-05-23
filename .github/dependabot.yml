@@ -10,6 +10,17 @@ updates:
     schedule:
       interval: "daily"
     open-pull-requests-limit: 5
+    ignore:
+      # frost-core 3.0.0 (latest) still pins rand_core ^0.6, so any
+      # `rand` major bump past 0.8.x produces an unbuildable graph
+      # (rand_core 0.6 vs 0.9 trait mismatch). Re-enable once frost-core
+      # upstreams rand 0.9. Tracking: ZcashFoundation/frost.
+      - dependency-name: "rand"
+        update-types: ["version-update:semver-major"]
+      # rand_chacha is on 0.3 (rand 0.8 era) for the same reason — its
+      # SeedableRng impls feed frost-core's RngCore + CryptoRng bounds.
+      - dependency-name: "rand_chacha"
+        update-types: ["version-update:semver-major"]
   - package-ecosystem: "gitsubmodule"
     directory: "/"
     allow:
