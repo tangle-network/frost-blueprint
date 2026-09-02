@@ -1,0 +1,18 @@
+[package]
+name = "libp2p-yamux"
+edition = "2024"
+rust-version = "1.88.0"
+description = "Yamux multiplexing protocol for libp2p"
+version = "0.47.0"
+authors = ["Parity Technologies <admin@parity.io>"]
+license = "MIT"
+repository = "https://github.com/libp2p/rust-libp2p"
+keywords = ["peer-to-peer", "libp2p", "networking"]
+categories = ["network-programming", "asynchronous"]
+
+[dependencies]
+futures = "0.3"
+libp2p-core = { version = "0.43.0" }
+thiserror = "2"
+yamux = { version = "0.14" }
+tracing = "0.1"

@@ -62,3 +62,5 @@ std = [
 
 [patch.crates-io]
 tokio-tar = { path = "vendor/tokio-tar" }
+# libp2p 0.56 pins libp2p-yamux 0.47. This copy follows upstream 0.48 at 9fd61e6.
+libp2p-yamux = { path = "vendor/libp2p-yamux" }
