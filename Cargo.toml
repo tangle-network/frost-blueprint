@@ -61,6 +61,8 @@ std = [
 ]
 
 [patch.crates-io]
+# Use the Blueprint revision that removes the legacy EigenLayer AWS path.
+blueprint-sdk = { git = "https://github.com/tangle-network/blueprint.git", rev = "5405c0118f3b05e334076f708d1e884e72e62afd", package = "blueprint-sdk" }
 tokio-tar = { path = "vendor/tokio-tar" }
 # Keep the libp2p 0.56 API while moving DNS resolution to hickory 0.26.
 libp2p-dns = { path = "vendor/libp2p-dns" }
