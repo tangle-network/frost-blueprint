@@ -17,7 +17,7 @@ github-attestations = true
 # The installers to generate for each app
 installers = ["shell"]
 # Target platforms to build apps for (Rust target-triple syntax)
-targets = ["aarch64-apple-darwin", "x86_64-apple-darwin", "x86_64-unknown-linux-gnu"]
+targets = ["x86_64-unknown-linux-gnu"]
 # Path that installers should place binaries in
 install-path = "CARGO_HOME"
 # Whether to install an updater program
@@ -25,10 +25,9 @@ install-updater = false
 # Which actions to run on pull requests
 pr-run-mode = "plan"
 
-[dist.github-custom-runners]
-aarch64-apple-darwin = "macos-15"
-x86_64-apple-darwin = "macos-13"
-x86_64-unknown-linux-gnu = "ubuntu-24.04"
+# release.yml is hand-edited to run on the self-hosted [self-hosted, ci-public]
+# runners, which dist cannot express; keep dist from regenerating over it.
+allow-dirty = ["ci"]
 
 [dist.bin-aliases]
 frost-blueprint-cli = ["frost"]
