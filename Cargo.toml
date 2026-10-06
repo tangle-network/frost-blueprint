@@ -5,6 +5,7 @@ edition = "2021"
 description = "FROST Blueprint built using Tangle Blueprint SDK"
 authors = ["Webb Technologies Inc."]
 license = "Unlicense"
+repository = "https://github.com/tangle-network/frost-blueprint"
 
 [lib]
 path = "src/lib.rs"
