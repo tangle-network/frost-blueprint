@@ -13,8 +13,13 @@ concurrency:
 
 jobs:
   foundry-check:
+    strategy:
+      matrix:
+        os: [ubuntu-latest]
+      fail-fast: true
+
     name: Foundry project
-    runs-on: [self-hosted, ci-public]
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
