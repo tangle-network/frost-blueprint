@@ -17,7 +17,7 @@ env:
 jobs:
   fmt:
     name: Rustfmt
-    runs-on: [self-hosted, ci-public]
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -32,10 +32,13 @@ jobs:
   lint:
     timeout-minutes: 120
     name: Clippy
-    runs-on: [self-hosted, ci-public]
+    runs-on: ubuntu-latest
     steps:
       - name: checkout code
         uses: actions/checkout@v4
+
+      - name: Install protoc
+        run: sudo apt-get install -y protobuf-compiler
 
       - name: Install Foundry
         uses: foundry-rs/foundry-toolchain@v1
@@ -59,16 +62,21 @@ jobs:
       - name: Forge build
         run: forge update && forge build
 
+      - uses: taiki-e/github-actions/free-device-space@main
+
       - name: Run Clippy
         run: cargo clippy --tests --examples -- -D warnings
 
   test:
     timeout-minutes: 90
     name: Unit tests
-    runs-on: [self-hosted, ci-public]
+    runs-on: ubuntu-latest
     steps:
       - name: checkout code
         uses: actions/checkout@v4
+
+      - name: Install protoc
+        run: sudo apt-get install -y protobuf-compiler
 
       - name: Install Foundry
         uses: foundry-rs/foundry-toolchain@v1
@@ -95,6 +103,8 @@ jobs:
 
       - name: Forge build
         run: forge update && forge build
+
+      - uses: taiki-e/github-actions/free-device-space@main
 
       - name: tests
         run: cargo nextest run --no-tests=pass
