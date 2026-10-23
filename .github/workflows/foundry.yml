@@ -11,6 +11,9 @@ concurrency:
   group: forge-validation-${{ github.head_ref }}
   cancel-in-progress: true
 
+permissions:
+  contents: read
+
 jobs:
   foundry-check:
     strategy:
@@ -23,6 +26,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
+          persist-credentials: false
           submodules: recursive
 
       - name: Install Foundry
