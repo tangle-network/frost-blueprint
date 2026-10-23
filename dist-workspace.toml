@@ -25,7 +25,7 @@ install-updater = false
 # Which actions to run on pull requests
 pr-run-mode = "plan"
 
-# release.yml is hand-edited to build Linux only on GitHub-hosted runners;
+# release.yml is hand-edited to build Linux on the isolated public self-hosted pool;
 # keep dist from regenerating over it.
 allow-dirty = ["ci"]
 
