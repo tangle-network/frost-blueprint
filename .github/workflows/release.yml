@@ -2,7 +2,6 @@
 name: Release
 
 on:
-  pull_request:
   push:
     tags:
       - '**[0-9]+.[0-9]+.[0-9]+*'
@@ -11,22 +10,6 @@ permissions:
   contents: read
 
 jobs:
-  plan-pr:
-    if: github.event_name == 'pull_request'
-    runs-on: [self-hosted, ci-public]
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          persist-credentials: false
-          submodules: recursive
-      - name: Install dist
-        # we specify bash to get pipefail; it guards against the `curl` command
-        # failing. otherwise `sh` won't catch that `curl` returned non-0
-        shell: bash
-        run: "curl --proto '=https' --tlsv1.2 -LsSf https://github.com/axodotdev/cargo-dist/releases/download/v0.25.1/cargo-dist-installer.sh | sh"
-      - name: Validate the distribution plan
-        run: dist plan --output-format=json
-
   release:
     if: github.event_name == 'push'
     uses: tangle-network/frost-blueprint/.github/workflows/release-trusted.yml@ac0aea19f0934fd9255979b29d9968ce74f09181

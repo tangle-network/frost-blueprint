@@ -40,6 +40,18 @@ cargo tangle blueprint create --name <project-name>
 
 and follow the instructions to create a new project.
 
+## Local qualification
+
+Automatic branch Rust/Foundry CI and PR-only distribution planning are retired. Merge the current default branch and qualify source changes through the maintained admitted gate:
+
+```bash
+beelink-gate auto https://github.com/tangle-network/frost-blueprint.git <full-sha> -- bash -lc 'cargo fmt -- --check && protoc --version && forge --version && forge soldeer update -d && forge update && forge build --sizes && cargo clippy --tests --examples -- -D warnings && cargo nextest run --no-tests=pass && forge test -vvv'
+```
+
+The admitted host needs the repository-owned Rust toolchain with rustfmt/Clippy, Foundry, protoc and cargo-nextest. Dependency preparation and Solidity build precede Rust checks/tests; inspect any dependency-lock changes before accepting a result. For distribution-plan changes, run the existing `dist plan --output-format=json` on an admitted host with the cargo-dist toolchain owned by the retained trusted release workflow.
+
+Workflow/documentation-only changes use YAML, actionlint, content/link and exact-diff checks. Tagged publication still calls the same immutable trusted release workflow with the exact tag source SHA; its source/ancestry checks, artifact dependencies, attestations and publication authority are unchanged. The cargo-dist build-setup input is retained. Local qualification does not publish a package or authorize on-chain deployment or signing.
+
 ## 🛠️ Development
 
 Once you have created a new project, you can run the following command to start the project:
